@@ -53,8 +53,6 @@ int main(int argc, char *argv[])
 
       if (event.handle==ipmux) {
 	Packet p;
-	unsigned short len;
-	bool checksumok;
 	MinetReceive(ipmux, p);
 	p.ExtractHeaderFromPayload<ICMPHeader>(ICMP_HEADER_LENGTH);
 

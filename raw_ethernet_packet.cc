@@ -60,7 +60,7 @@ void RawEthernetPacket::Serialize(const int fd) const
   if (writeall(fd,(char*)&size,sizeof(size))!=sizeof(size)) { 
     throw SerializationException();
   }
-  if (writeall(fd,data,size)!=size) { 
+  if (writeall(fd,data,size)!=(int)size) { 
     throw SerializationException();
   }
 }
@@ -70,7 +70,7 @@ void RawEthernetPacket::Unserialize(const int fd)
   if (readall(fd,(char*)&size,sizeof(size))!=sizeof(size)) {
     throw SerializationException();
   }
-  if (readall(fd,data,size)!=size) {
+  if (readall(fd,data,size)!=(int)size) {
     throw SerializationException();
   }
 }
@@ -87,8 +87,8 @@ void RawEthernetPacket::Print(unsigned size, FILE *out) const
 ostream & RawEthernetPacket::Print(ostream &os) const
 {
   char buf[10240];
-  int n;
-  int i;
+  unsigned n;
+  unsigned i;
 
   snprintf(buf,2048,"RawEthernetPacket(size=%u, bytes=", size);
   n=strlen(buf);

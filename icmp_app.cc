@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
   char buf[512];
   sockaddr_in server_sa, client_sa;
   struct hostent *he;
-  int fd, rc;
+  int fd;
 
   if (argc!=4) {
     usage();
@@ -98,8 +98,6 @@ int main(int argc, char *argv[])
 
   }
 
-
- done:
  err:
   minet_close(fd);
   minet_deinit();

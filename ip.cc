@@ -274,8 +274,6 @@ unsigned short IPHeader::ComputeChecksum() const
 {
   unsigned short buf[IP_HEADER_MAX_LENGTH/2];
   unsigned char len;
-  int i;
-  unsigned int sum;
 
   GetHeaderLength(len);
   len*=4;

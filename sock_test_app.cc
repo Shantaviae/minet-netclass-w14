@@ -187,8 +187,6 @@ int main(int argc, char *argv[]) {
   Connection con(IPAddress("10.10.10.10"), IP_ADDRESS_ANY, 1999, 1999, IP_PROTO_TCP);
   SockLibRequestResponse outbound(mSTATUS, con, 0, garbage, garbage.GetSize(), 0);
 
-  int menu_select = 0;
-
   fromsock=open(sock2app_fifo_name,O_RDONLY);
   tosock=open(app2sock_fifo_name,O_WRONLY);
 

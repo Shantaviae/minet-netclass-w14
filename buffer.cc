@@ -149,7 +149,7 @@ ostream & Buffer::Print(ostream &os) const
 {
   size_t size=GetSize();
   char hex[2];
-  int i;
+  unsigned i;
 
   os<<"Buffer(size="<<size<<", data=";
   for (i=0;i<size;i++) {

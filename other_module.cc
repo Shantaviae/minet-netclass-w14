@@ -32,7 +32,6 @@ int main(int argc, char *argv[])
   MinetSendToMonitor(MinetMonitoringEvent("other_module: handling OTHER traffic"));
 
   MinetEvent event;
-  int rc;
 
   while (MinetGetNextEvent(event)==0) {
     if (event.eventtype!=MinetEvent::Dataflow 

@@ -51,7 +51,6 @@ int main(int argc, char * argv[])
   MinetSendToMonitor(MinetMonitoringEvent("ip_mux operating!"));
 
   MinetEvent event;
-  int rc;
 
   while (MinetGetNextEvent(event)==0) {
     if (event.eventtype!=MinetEvent::Dataflow 

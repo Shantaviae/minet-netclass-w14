@@ -214,7 +214,6 @@ int main(int argc, char *argv[])
 	len = len1 - iphlen - tcphlen;  
 	cerr << "Length of segment is " << len << endl;
 	
-	bool checksumok;
 	unsigned char flags,replyF=0;
 	
 	//cerr << "TCP Packet: IP Header is "<<iph<<endl;

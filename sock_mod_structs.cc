@@ -242,8 +242,8 @@ PortStatus & PortStatus::operator=(const PortStatus & rhs) {
     portArrayIndex[i] = rhs.portArrayIndex[i];
     for (j = 0; j < NUM_PORTS; j++)
       portArray[i][j] = rhs.portArray[i][j];
-  return *this;
   }
+  return *this;
 }
 
 int PortStatus::FindFreePort(IPAddress ip, unsigned sockfd) {

@@ -53,8 +53,6 @@ int main(int argc, char *argv[])
 
   MinetSendToMonitor(MinetMonitoringEvent("arp_module operational."));
 
-  int rc;
-  
   MinetEvent event;
 
   while (MinetGetNextEvent(event)==0) {

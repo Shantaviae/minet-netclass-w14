@@ -11,7 +11,7 @@ void usage()
 int main(int argc, char *argv[])
 {
   char buf[512];
-  sockaddr_in server_sa, client_sa;
+  sockaddr_in server_sa;
   int fd, rc;
 
   if (argc!=3) {

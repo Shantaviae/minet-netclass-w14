@@ -116,7 +116,9 @@ int EthernetStartInternal()
     support async i/o on pipes.  Real OSes do.
   */
 
-  struct sigaction sa={ &EthernetInputHandler,0,ETHERNET_SIGNAL,0,0};
+  struct sigaction sa;
+  memset(&sa,0,sizeof(sa));
+  sa.sa_handler=EthernetInputHandler;
   sigaction(ETHERNET_SIGNAL,&sa,0);
 
   if (socketpair(AF_UNIX,SOCK_STREAM,0,ethernet_reader_pair)) { 

@@ -319,7 +319,6 @@ bool        MinetIsModuleMonitored(const MinetModule &mod)
 
 int         MinetInit(const MinetModule &mod)
 {
-  char *env = getenv("MINET_MONITOR");
   assert(MyModuleType==MINET_DEFAULT);
   MyModuleType=mod;
   MyFifos.clear();
@@ -649,7 +648,6 @@ MinetHandle MinetConnect(const MinetModule &mod)
 MinetHandle MinetAccept(const MinetModule &mod)
 {
   const char *fifofrom, *fifoto;
-  bool above;
 
   switch (MyModuleType) {
   case MINET_MONITOR:

@@ -199,8 +199,6 @@ bool TCPHeader::IsCorrectChecksum(const Packet &p) const
 
 void TCPHeader::RecomputeChecksum(const Packet &p)
 {
-  unsigned short len;
-
   if (GetSize()<TCP_HEADER_BASE_LENGTH) {
     SetUrgentPtr(0,p);
   }

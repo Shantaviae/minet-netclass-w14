@@ -53,8 +53,6 @@ int main(int argc, char * argv[])
 
   MinetEvent event;
 
-  int rc;
-
   while (MinetGetNextEvent(event)==0) {
     if (event.eventtype!=MinetEvent::Dataflow 
 	|| event.direction!=MinetEvent::IN) {

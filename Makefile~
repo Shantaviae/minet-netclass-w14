@@ -26,7 +26,8 @@ LIBMINET_OBJS  = \
            sockint.o                            \
 	   sock_mod_structs.o                   \
            constate.o				\
-	   route.o
+	   route.o                              \
+           bitsource.o 
 
 EXECOBJS_EXCEPT_READER_WRITER =                 \
            monitor.o                            \
@@ -55,7 +56,8 @@ EXECOBJS_EXCEPT_READER_WRITER =                 \
            test_writer.o                        \
            test_arp.o                           \
            test_raw_ethernet_packet_buffer.o    \
-           icmp_app.o
+           icmp_app.o                           \
+           test_bitsource.o
 #           device_driver_new_api.o              \
 
 

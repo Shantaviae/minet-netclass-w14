@@ -47,8 +47,6 @@ int main(int argc, char *argv[])
     } else {
       if (event.handle==mux) {
 	Packet p;
-	unsigned short len;
-	bool checksumok;
 	MinetReceive(mux,p);
       }
       if (event.handle==sock) {

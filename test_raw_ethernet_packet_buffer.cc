@@ -3,7 +3,7 @@
 
 char data[1024];
 
-main()
+int main(int argc, char *argv[])
 {
   RawEthernetPacket p;
   RawEthernetPacketBuffer b(10);

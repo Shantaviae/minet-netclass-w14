@@ -80,7 +80,6 @@ void AttachDebuggerHere(char *execname=0)
 void AttachDebuggerHere(char *execname)
 {
   char s[1000];
-  FILE *fd;
   execname = execname==0 ? GetExecName() : execname;
   //signal(SIGUSR2,&AttacheDebuggerHereSigHandler);
   sprintf(s, "( EXEC=`which %s`; gnudoit \"(progn (gdb \\\"$EXEC\\\") (gdb-call \\\"attach %d\\\") (gdb-call \\\"break BreakHere\\\") (gdb-call \\\"continue\\\") )\") ; sleep 10", execname, getpid());

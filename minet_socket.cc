@@ -59,6 +59,9 @@ EXTERNC int minet_error () {
   case MINET_SOCKS:
     return (minet_errno);
     break;
+  default:
+    minet_errno = ENODEV;
+    return minet_errno;
   }
 }
 
@@ -74,40 +77,47 @@ EXTERNC int minet_perror (char *s) {
     return (0);
     break;
   case MINET_SOCKS:
-    cout << s;
+    cerr << s;
     switch (minet_errno) {
     case EOK:
-      cout << ": Ok" << endl;
+      cerr << ": Ok" << endl;
       break;
     case ENOMATCH:
-      cout << ": No match found" << endl;
+      cerr << ": No match found" << endl;
       break;
     case EBUF_SPACE:
-      cout << ": Buffer space error" << endl;
+      cerr << ": Buffer space error" << endl;
       break;
     case EUNKNOWN:
-      cout << ": Unknown error" << endl;
+      cerr << ": Unknown error" << endl;
       break;
     case ERESOURCE_UNAVAIL:
-      cout << ": Resource unavailable" << endl;
+      cerr << ": Resource unavailable" << endl;
       break;
     case EINVALID_OP:
-      cout << ": Invalid operation" << endl;
+      cerr << ": Invalid operation" << endl;
       break;
     case ENOT_IMPLEMENTED:
-      cout << ": Function not implemented" << endl;
+      cerr << ": Function not implemented" << endl;
       break;
     case ENOT_SUPPORTED:
-      cout << ": Not supported" << endl;
+      cerr << ": Not supported" << endl;
       break;
     case EWOULD_BLOCK:
-      cout << ": Would block" << endl;
+      cerr << ": Would block" << endl;
       break;
     case ECONN_FAILED:
-      cout << ": Connection failed" << endl;
+      cerr << ": Connection failed" << endl;
       break;
+    default:
+      cerr << ": Unknown error"<<endl;
     }
     return (0);
+    break;
+  default:
+    cerr << s << ": UNKNOWN SOCKET TYPE"<<endl;
+    minet_errno=ENODEV;
+    return -1;
     break;
   }
 }
@@ -118,10 +128,12 @@ EXTERNC int minet_socket (int type) {
   case UNINIT_SOCKS:
     errno = ENODEV;            // "No such device" error
     return (-1);
+    break;
   case KERNEL_SOCKS:
     if ((type == SOCK_STREAM) || (type == SOCK_DGRAM)) 
       return (socket (AF_INET, type, 0));
-  case MINET_SOCKS:
+    break;
+  case MINET_SOCKS: {
     SockLibRequestResponse slrr;
     switch (type) {
     case SOCK_STREAM:
@@ -146,7 +158,6 @@ EXTERNC int minet_socket (int type) {
 				    Buffer(),
 				    0, 0);
       break;
-
     }
     MinetSend(sock,slrr);
     MinetReceive(sock,slrr);
@@ -155,6 +166,14 @@ EXTERNC int minet_socket (int type) {
       return (-1);
     return (slrr.sockfd);
   }
+    break;
+  default:
+    minet_errno=ENODEV;
+    return -1;
+    break;
+  }
+  minet_errno=ENODEV;
+  return -1;
 }
 
 
@@ -163,9 +182,11 @@ EXTERNC int minet_bind (int sockfd, struct sockaddr_in *myaddr) {
   case UNINIT_SOCKS:
     errno = ENODEV;            // "No such device" error
     return (-1);
+    break;
   case KERNEL_SOCKS:
     return (bind (sockfd, (sockaddr *) myaddr, sizeof(*myaddr)));
-  case MINET_SOCKS:
+    break;
+  case MINET_SOCKS: {
     SockLibRequestResponse slrr(mBIND,
 				Connection(IPAddress(ntohl((unsigned)myaddr->sin_addr.s_addr)),
 					   IP_ADDRESS_ANY,
@@ -184,6 +205,11 @@ EXTERNC int minet_bind (int sockfd, struct sockaddr_in *myaddr) {
       return (-1);
     return (0);
   }
+    break;
+  default:
+    minet_errno=ENODEV;
+    return -1;
+  }
 }
 
 
@@ -192,9 +218,11 @@ EXTERNC int minet_listen (int sockfd, int backlog) {
   case UNINIT_SOCKS:
     errno = ENODEV;            // "No such device" error
     return (-1);
+    break;
   case KERNEL_SOCKS:
     return (listen (sockfd, backlog));
-  case MINET_SOCKS:
+    break;
+  case MINET_SOCKS: {
     SockLibRequestResponse slrr(mLISTEN,
 				Connection(),
 				sockfd,
@@ -206,6 +234,11 @@ EXTERNC int minet_listen (int sockfd, int backlog) {
     if (minet_errno != EOK)
       return (-1);
     return (0);
+  }
+    break;
+  default:
+    minet_errno=ENODEV;
+    return -1;
   }
 }
 
@@ -220,7 +253,7 @@ EXTERNC int minet_accept (int sockfd, struct sockaddr_in *addr) {
   case KERNEL_SOCKS:
     return (accept (sockfd, (sockaddr *) addr, &length));
     break;
-  case MINET_SOCKS:
+  case MINET_SOCKS: {
     SockLibRequestResponse slrr(mACCEPT,
 				Connection(IP_ADDRESS_ANY,
 					   IPAddress((unsigned)
@@ -239,6 +272,11 @@ EXTERNC int minet_accept (int sockfd, struct sockaddr_in *addr) {
       return (-1);
     return (slrr.sockfd);
   }
+    break;
+  default:
+    minet_errno=ENODEV;
+    return -1;
+  }
 }
 
 
@@ -251,7 +289,7 @@ EXTERNC int minet_connect (int sockfd, struct sockaddr_in *addr) {
   case KERNEL_SOCKS:
     return (connect (sockfd, (sockaddr *) addr, sizeof(*addr)));
     break;
-  case MINET_SOCKS:
+  case MINET_SOCKS: {
     SockLibRequestResponse slrr(mCONNECT,
 				Connection(IP_ADDRESS_ANY,
 					   IPAddress(ntohl((unsigned)
@@ -271,6 +309,11 @@ EXTERNC int minet_connect (int sockfd, struct sockaddr_in *addr) {
     }
     return (0);
   }
+    break;
+  default:
+    minet_errno=ENODEV;
+    return -1;
+  }
 }
 
 
@@ -283,7 +326,7 @@ EXTERNC int minet_read (int fd, char *buf, int len) {
   case KERNEL_SOCKS:
     return (read (fd, buf, len));
     break;
-  case MINET_SOCKS:
+  case MINET_SOCKS: {
     SockLibRequestResponse slrr(mREAD,
 				Connection(),
 				fd,
@@ -299,6 +342,12 @@ EXTERNC int minet_read (int fd, char *buf, int len) {
     b.GetData(buf, b.GetSize(), 0);
     return (b.GetSize());
   }
+    break;
+  default:
+    minet_errno=ENODEV;
+    return -1;
+    break;
+  }
 }
 
 
@@ -311,7 +360,7 @@ EXTERNC int minet_write (int fd, char *buf, int len) {
   case KERNEL_SOCKS:
     return (write (fd, buf, len));
     break;
-  case MINET_SOCKS:
+  case MINET_SOCKS: {
     SockLibRequestResponse slrr(mWRITE,
 				Connection(),
 				fd,
@@ -323,6 +372,12 @@ EXTERNC int minet_write (int fd, char *buf, int len) {
     if (minet_errno != EOK)
       return (-1);
     return (slrr.bytes);
+  }
+    break;
+  default:
+    minet_errno=ENODEV;
+    return -1;
+    break;
   }
 }
 
@@ -339,6 +394,7 @@ EXTERNC int minet_recvfrom (int fd, char *buf, int len,
     return (recvfrom (fd, buf, len, 0, (sockaddr *) from, &length));
     break;
   case MINET_SOCKS:
+    {
     SockLibRequestResponse slrr(mRECVFROM,
 				Connection(IP_ADDRESS_ANY,
 					   IPAddress((unsigned)
@@ -357,6 +413,12 @@ EXTERNC int minet_recvfrom (int fd, char *buf, int len,
       return (-1);
     return (0);
   }
+    break;
+  default:
+    minet_errno=ENODEV;
+    return -1;
+    break;
+  }
 }
 
 
@@ -370,7 +432,7 @@ EXTERNC int minet_sendto (int fd, char *buf, int len,
   case KERNEL_SOCKS:
     return (sendto (fd, buf, len, 0, (sockaddr *) to, sizeof(*to)));
     break;
-  case MINET_SOCKS:
+  case MINET_SOCKS: {
     SockLibRequestResponse slrr(mSENDTO,
 				Connection(IP_ADDRESS_ANY,
 					   IPAddress(ntohl((unsigned)
@@ -389,6 +451,12 @@ EXTERNC int minet_sendto (int fd, char *buf, int len,
       return (-1);
     return (0);
   }
+    break;
+  default:
+    minet_errno=ENODEV;
+    return -1;
+    break;
+  }
 }
 
 
@@ -401,7 +469,7 @@ EXTERNC int minet_close (int sockfd) {
   case KERNEL_SOCKS:
     return (close (sockfd));
     break;
-  case MINET_SOCKS:
+  case MINET_SOCKS: {
     SockLibRequestResponse slrr(mCLOSE,
 				Connection(),
 				sockfd,
@@ -413,6 +481,12 @@ EXTERNC int minet_close (int sockfd) {
     if (minet_errno != EOK)
       return (-1);
     return (0);
+  }
+    break;
+  default:
+    minet_errno=ENODEV;
+    return -1;
+    break;
   }
 }
 
@@ -513,6 +587,10 @@ EXTERNC int minet_select (int             minet_maxfd,
     }
     return (ctr);
 #endif
+    break;
+  default:
+    minet_errno=ENODEV;
+    return -1;
     break;
   }
 }
@@ -621,6 +699,10 @@ EXTERNC int minet_select_ex (int             minet_maxfd,
     //	   unix_except_fds, timeout));
 #endif
     break;
+  default:
+    minet_errno=ENODEV;
+    return -1;
+    break;
   }
 }
 
@@ -666,6 +748,10 @@ EXTERNC int minet_poll (struct pollfd *minet_fds,
     }
     return (revnts);
 #endif
+    break;
+  default:
+    minet_errno=ENODEV;
+    return -1;
     break;
   }
 }
@@ -718,6 +804,10 @@ EXTERNC int minet_poll_ex (struct pollfd *minet_fds,
 	    poll(unix_fds, num_unix_fds, timeout));
 #endif
     break;
+  default:
+    minet_errno=ENODEV;
+    return -1;
+    break;
   }
 }
 
@@ -736,7 +826,7 @@ EXTERNC int minet_set_nonblocking (int sockfd) {
     return 0;
   }
     break;
-  case MINET_SOCKS:
+  case MINET_SOCKS: {
     SockLibRequestResponse slrr(mSET_NONBLOCKING,
 				Connection(),
 				sockfd,
@@ -748,6 +838,12 @@ EXTERNC int minet_set_nonblocking (int sockfd) {
     if (minet_errno != EOK)
       return (-1);
     return (0);
+  }
+    break;
+  default:
+    minet_errno=ENODEV;
+    return -1;
+    break;
   }
 }
 
@@ -766,7 +862,7 @@ EXTERNC int minet_set_blocking (int sockfd) {
     return 0;
   }
     break;
-  case MINET_SOCKS:
+  case MINET_SOCKS: {
     SockLibRequestResponse slrr(mSET_BLOCKING,
 				Connection(),
 				sockfd,
@@ -778,6 +874,12 @@ EXTERNC int minet_set_blocking (int sockfd) {
     if (minet_errno != EOK)
       return (-1);
     return (0);
+  }
+    break;
+  default:
+    minet_errno=ENODEV;
+    return -1;
+    break;
   }
 }
 
@@ -794,7 +896,7 @@ EXTERNC int minet_can_write_now (int sockfd) {
     FD_SET(sockfd, write_fds);
     return (select(sockfd+1, NULL, write_fds, NULL, 0));
     break;
-  case MINET_SOCKS:
+  case MINET_SOCKS: {
     SockLibRequestResponse slrr(mCAN_WRITE_NOW,
 				Connection(),
 				sockfd,
@@ -806,6 +908,12 @@ EXTERNC int minet_can_write_now (int sockfd) {
     if (minet_errno != EOK)
       return (-1);
     return (0);
+  }
+    break;
+  default:
+    minet_errno=ENODEV;
+    return -1;
+    break;
   }
 }
 
@@ -822,7 +930,7 @@ EXTERNC int minet_can_read_now (int sockfd) {
     FD_SET(sockfd, read_fds);
     return (select(sockfd+1, read_fds, NULL, NULL, 0));
     break;
-  case MINET_SOCKS:
+  case MINET_SOCKS: {
     SockLibRequestResponse slrr(mCAN_READ_NOW,
 				Connection(),
 				sockfd,
@@ -834,5 +942,11 @@ EXTERNC int minet_can_read_now (int sockfd) {
     if (minet_errno != EOK)
       return (-1);
     return (0);
+  }
+    break;
+  default:
+    minet_errno=ENODEV;
+    return -1;
+    break;
   }
 }

@@ -48,7 +48,6 @@ ARPPacket::~ARPPacket()
 
 bool ARPPacket::IsIPToEthernet() const
 {
-  short opcode;
   ARPHWAddressSpaceType hw, proto;
   EthernetProtocol eproto;
 

@@ -59,7 +59,7 @@ void Packet::Serialize(const int fd) const
 void Packet::Unserialize(const int fd) 
 {
   size_t num;
-  int i;
+  unsigned i;
 
   headers.clear();
   payload.Clear();

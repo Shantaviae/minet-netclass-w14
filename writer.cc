@@ -33,10 +33,7 @@ int main(int argc, char *argv[])
 {
   RawEthernetPacket p;
   int nin,nout;
-  int len;
   int one;
-  struct pollfd pfd = { 0, POLLIN, 0};
-  int full=ETHERNET_SERVICE_OUTPUT_BUFFER_FULL;
   int fail=ETHERNET_SERVICE_DMA_FAIL;
   int ok = ETHERNET_SERVICE_DMA_DONE;
   

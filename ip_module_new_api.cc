@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
 	  unsigned char tos;
 	  iph.GetTOS(tos);
 	  tos&=0x3;
-	  tos<<6;
+	  tos<<=6;
 	  cerr<< "   tos reserved bits (2) : "; PrintBits(cerr,&tos,2,0); cerr<<endl;
 	}
 	if (DIFFUSION_ID_DF) {

@@ -43,7 +43,6 @@ void ProcessTCPMessage (SockRequestResponse * s, int & respond) {
   RequestRecord *elt = NULL;
   SockRequestResponse * request = NULL;
   SockLibRequestResponse *appmsg = NULL;
-  Buffer *b;
   Connection *c;
   int sock, newsock;
 
@@ -254,7 +253,6 @@ void ProcessUDPMessage (SockRequestResponse * s, int & respond) {
   RequestRecord *elt = NULL;
   SockRequestResponse * request = NULL;
   SockLibRequestResponse *appmsg = NULL;
-  Buffer *b;
   int sock;
   
   switch (type) {
@@ -382,7 +380,6 @@ void ProcessICMPMessage (SockRequestResponse * s, int & respond) {
   RequestRecord *elt = NULL;
   SockRequestResponse * request = NULL;
   SockLibRequestResponse *appmsg = NULL;
-  Buffer *b;
   int sock;
 
   // process the message
