@@ -79,8 +79,13 @@ int main(int argc, char *argv[])
   }
 
   prog[0]=0;
-  strcpy(prog,"net 10.10/16");
-  
+  //strcpy(prog,"net 10.10/16");
+  char *ip=getenv("MINET_IPADDR");
+  if (ip==0) { 
+    fprintf(stderr,"SET MINET_IPADDR");
+    return -1;
+  }
+  sprintf(prog,"host %s or broadcast",ip);
   
   DEBUGPRINTF(10,"Filter: '%s'\n", prog);
 

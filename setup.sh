@@ -2,7 +2,8 @@
 
 
 echo "Setting MINET environment vars"
-export MINET_IPADDR="10.10.2.0"
+#export MINET_IPADDR="129.105.42.2"
+export MINET_IPADDR="10.10.10.1"
 export MINET_ETHERNETDEVICE="eth0"
 export MINET_ETHERNETADDR=`./get_addr.pl $MINET_ETHERNET_DEVICE`
 export MINET_READER="/home/Minet/execs/reader"

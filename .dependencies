@@ -47,6 +47,7 @@ constate.o: constate.cc constate.h sockint.h sock.h config.h buffer.h \
  tcp.h
 route.o: route.cc route.h ip.h headertrailer.h config.h buffer.h \
  util.h packet.h raw_ethernet_packet.h ethernet.h
+bitsource.o: bitsource.cc bitsource.h
 minet_socket.o: minet_socket.cc Minet.h config.h buffer.h util.h \
  debug.h error.h raw_ethernet_packet.h packet.h headertrailer.h \
  raw_ethernet_packet_buffer.h ethernet.h arp.h ip.h icmp.h udp.h tcp.h \
@@ -71,7 +72,7 @@ arp_module.o: arp_module.cc Minet.h config.h buffer.h util.h debug.h \
 ip_module_new_api.o: ip_module_new_api.cc Minet.h config.h buffer.h \
  util.h debug.h error.h raw_ethernet_packet.h packet.h headertrailer.h \
  raw_ethernet_packet_buffer.h ethernet.h arp.h ip.h icmp.h udp.h tcp.h \
- sock.h sockint.h sock_mod_structs.h constate.h Monitor.h
+ sock.h sockint.h sock_mod_structs.h constate.h Monitor.h bitsource.h
 ip_module.o: ip_module.cc route.h ip.h headertrailer.h config.h \
  buffer.h util.h packet.h raw_ethernet_packet.h ethernet.h Minet.h \
  debug.h error.h raw_ethernet_packet_buffer.h arp.h icmp.h udp.h tcp.h \
@@ -135,6 +136,7 @@ test_raw_ethernet_packet_buffer.o: test_raw_ethernet_packet_buffer.cc \
  raw_ethernet_packet_buffer.h raw_ethernet_packet.h config.h packet.h \
  buffer.h util.h headertrailer.h
 icmp_app.o: icmp_app.cc minet_socket.h
+test_bitsource.o: test_bitsource.cc bitsource.h
 reader.o: reader.cc config.h raw_ethernet_packet.h packet.h buffer.h \
  util.h headertrailer.h debug.h
 writer.o: writer.cc config.h util.h raw_ethernet_packet.h packet.h \

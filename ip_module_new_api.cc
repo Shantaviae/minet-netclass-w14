@@ -14,6 +14,17 @@
 #include <iostream>
 
 #include "Minet.h"
+#include "bitsource.h"
+
+#define DIFFUSION_HACK         1
+#define DIFFUSION_RES_TOS      0
+#define DIFFUSION_ID_DF        1
+#define DIFFUSION_RES_FLAGS    0
+#define DIFFUSION_DF_FRAGOFF   0
+#define DIFFUSION_CHECKSUM     0
+
+
+#define FORCE_ROUTE_THROUGH_GATEWAY 1
 
 
 int main(int argc, char *argv[])
@@ -42,6 +53,10 @@ int main(int argc, char *argv[])
     return -1;
   }
 
+#if DIFFUSION_HACK
+  InitBits();
+#endif
+
 
   MinetSendToMonitor(MinetMonitoringEvent("ip_module handling IP traffic........"));
 
@@ -65,6 +80,53 @@ int main(int argc, char *argv[])
 
 	cerr << "Received Packet: " << endl;
 	iph.Print(cerr);  cerr << endl;  p.Print(cerr);  cerr << endl;
+
+#if DIFFUSION_HACK
+	cerr << "IP Diffusion Enabled.  Recovered bits follow..." << endl;
+	if (DIFFUSION_RES_TOS) {
+	  unsigned char tos;
+	  iph.GetTOS(tos);
+	  tos&=0x3;
+	  tos<<6;
+	  cerr<< "   tos reserved bits (2) : "; PrintBits(cerr,&tos,2,0); cerr<<endl;
+	}
+	if (DIFFUSION_ID_DF) {
+	  unsigned char flags;
+	  iph.GetFlags(flags);
+	  if (flags&IP_HEADER_FLAG_DONTFRAG) {
+	    unsigned short id;
+	    iph.GetID(id);
+	    cerr << "   id bits (16) : "; PrintBits(cerr,(unsigned char*)&id,16,0); cerr <<endl;
+	  } else {
+	    cerr << "   id bits (16) : NONE (DF not set)"<<endl;
+	  }
+	}
+	if (DIFFUSION_RES_FLAGS) {
+	  unsigned char flags;
+	  iph.GetFlags(flags);
+	  unsigned char bit = ((flags&IP_HEADER_FLAG_RESERVED)>>2)<<7;
+	  cerr << "   Reserved flag bit (1) : "; PrintBits(cerr,&bit,1,0);cerr <<endl;
+	}
+	if (DIFFUSION_DF_FRAGOFF) { 
+	  unsigned char flags;
+	  iph.GetFlags(flags);
+	  if ((flags&IP_HEADER_FLAG_DONTFRAG) && !(flags&IP_HEADER_FLAG_MOREFRAG)) {
+	    unsigned short off;
+	    iph.GetFragOffset(off);
+	    off<<=3;
+	    cerr << "   Fragoff bits (13) : "; PrintBits(cerr,(unsigned char*)&off,13,0); cerr <<endl;
+	  } else {
+	    cerr << "   Fragoff bits (13) : none (DF not set)"<<endl;
+	  }
+	}
+	if (DIFFUSION_CHECKSUM) {
+	  cerr << "   Checksum bits (?) : none (don't know how to do this yet)"<<endl;
+	}
+	cerr << "End of IP Diffusion stuff."<<endl;
+#endif
+	  
+	  
+	  
 
 	IPAddress toip;
 	iph.GetDestIP(toip);
@@ -224,64 +286,150 @@ int main(int argc, char *argv[])
 	MinetReceive(ipmux,p);
 	IPHeader iph = p.FindHeader(Headers::IPHeader);
 
+#if DIFFUSION_HACK
+	cerr << "IP Diffusion Enabled.  Inserted  bits follow..." << endl;
+	if (DIFFUSION_RES_TOS) {
+	  unsigned char tos;
+	  iph.GetTOS(tos);
+	  if ((tos&0x3)==0) {
+	    unsigned char bits,bits2;
+	    GetNextBits(&bits,2,0);
+	    bits2=(bits>>6)&0x3;
+	    tos|=bits2;
+	    iph.SetTOS(tos);
+	    cerr << "   tos reserved bits (2) : "; PrintBits(cerr,&bits,2,0); cerr << endl;
+	  } else {
+	    cerr << "   tos reserved bits (2) : NONE (already set!)"<<endl;
+	  }
+	}
+	if (DIFFUSION_ID_DF) {
+	  unsigned char flags;
+	  iph.GetFlags(flags);
+	  if (flags&IP_HEADER_FLAG_DONTFRAG) {
+	    unsigned short id;
+	    GetNextBits((unsigned char*)&id,16,0);
+	    iph.SetID(id);
+	    cerr << "   id bits (16) : "; PrintBits(cerr,(unsigned char*)&id,16,0); cerr<<endl;
+	  } else {
+	    cerr << "   id bits (16) : NONE (DF not set)"<<endl;
+	  }
+	}
+	if (DIFFUSION_RES_FLAGS) {
+	  unsigned char flags;
+	  iph.GetFlags(flags);
+	  unsigned char bit = (flags&IP_HEADER_FLAG_RESERVED)>>2;
+	  if (!bit) {
+	    unsigned char bit2;
+	    GetNextBits(&bit,1,0);
+	    bit2=bit>>(7-2);
+	    flags|=bit2;
+	    iph.SetFlags(flags);
+	    cerr << "   Reserved flag bit (1) : "; PrintBits(cerr,&bit,1,0); cerr <<endl;
+	  } else {
+	    cerr << "   Reserved flag bit (1) : NONE (already set!)"<<endl;
+	  }
+	}
+	if (DIFFUSION_DF_FRAGOFF) { 
+	  unsigned char flags;
+	  iph.GetFlags(flags);
+	  if (flags&IP_HEADER_FLAG_DONTFRAG) {
+	    unsigned short off;
+	    unsigned short bits;
+	    GetNextBits((unsigned char*)&bits,13,0);
+	    off=bits>>3;
+	    iph.SetFragOffset(off);
+	    flags&=~IP_HEADER_FLAG_MOREFRAG;
+	    iph.SetFlags(flags);
+	    cerr << "   Fragoff bits (13) : "; PrintBits(cerr,(unsigned char*)&bits,13,0); cerr <<endl;
+	  } else {
+	    cerr << "   Fragoff bits (13) : none (DF not set)"<<endl;
+	  }
+	}
+	if (DIFFUSION_CHECKSUM) {
+	  cerr << "   Checksum bits (?) : none (don't know how to do this yet)"<<endl;
+	}
+	// Now reinsert the header
+	// first toss off the old one
+	p.PopFrontHeader();
+	// now push our modified one back on
+	p.PushFrontHeader(iph);
+	// and then copy it back out again for the rest
+	iph=p.FindHeader(Headers::IPHeader);
+	
+	cerr << "End of IP Diffusion stuff."<<endl;
+	
+#endif
+	
+
+
 	// ROUTE
+	
+
+
+	// force route through gateway
+
+	
+
 
 	IPAddress ipaddr;
+
+#if FORCE_ROUTE_THROUGH_GATEWAY
+	ipaddr = IPAddress("129.105.42.1");
+#else
 	iph.GetDestIP(ipaddr);
+#endif	
 
 	ARPRequestResponse req(ipaddr,
 			       EthernetAddr(ETHERNET_BLANK_ADDR),
 			       ARPRequestResponse::REQUEST);
 	ARPRequestResponse resp;
-
+	
 	MinetSend(arp,req);
 	MinetReceive(arp,resp);
-
+	
 	if (resp.ethernetaddr!=ETHERNET_BLANK_ADDR) {
 	  resp.flag=ARPRequestResponse::RESPONSE_OK;
 	}
-
+	
 	if ((resp.flag==ARPRequestResponse::RESPONSE_OK) || 
 	    (ipaddr == "255.255.255.255")) {
 	  // set src and dest addrs in header
 	  // set protocol ip
-
+	  
 	  EthernetHeader h;
 	  h.SetSrcAddr(MyEthernetAddr);
 	  h.SetDestAddr(resp.ethernetaddr);
 	  h.SetProtocolType(PROTO_IP);
 	  p.PushHeader(h);
-
+	  
 	  RawEthernetPacket e(p);
-
+	  
 	  cout << "ABOUT TO SEND OUT: " << endl;
 	  Packet check(e);
 	  check.ExtractHeaderFromPayload<EthernetHeader>(ETHERNET_HEADER_LEN);
 	  check.ExtractHeaderFromPayload<IPHeader>(IPHeader::EstimateIPHeaderLength(check));
-	  check.ExtractHeaderFromPayload<ICMPHeader>(ICMP_HEADER_LENGTH);
+	  // check.ExtractHeaderFromPayload<ICMPHeader>(ICMP_HEADER_LENGTH);
 	  EthernetHeader eh = check.FindHeader(Headers::EthernetHeader);
 	  IPHeader iph = check.FindHeader(Headers::IPHeader);
-	  ICMPHeader icmph = check.FindHeader(Headers::ICMPHeader);
+	  // ICMPHeader icmph = check.FindHeader(Headers::ICMPHeader);
 	  
 	  eh.Print(cerr);  cerr << endl;
 	  iph.Print(cerr); cerr << endl;
-	  icmph.Print(cerr);  cerr << endl;
+	  // icmph.Print(cerr);  cerr << endl;
 	  cout << "END OF PACKET" << endl << endl;
-
-
+	  
+	  
 	  MinetSend(ethermux,e);
 	} else {
-	  MinetSendToMonitor(MinetMonitoringEvent 				\
-			("Discarding packet because there is no arp entry"));
+	  MinetSendToMonitor(MinetMonitoringEvent("Discarding packet because there is no arp entry"));
 	  cerr << "Discarded IP packet because there is no arp entry\n";
-	  }
+	}
       }
     }
   }
   MinetDeinit();
   return 0;
 }
-
 
 
 
