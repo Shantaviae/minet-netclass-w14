@@ -32,28 +32,28 @@ int main(int argc, char * argv[])
 
   if (dd==MINET_NOHANDLE && MinetIsModuleInConfig(MINET_DEVICE_DRIVER)) {
     MinetSendToMonitor(MinetMonitoringEvent("Can't connect to device driver"));
-    cout << "Can't connect to device driver" << endl;
+    cerr << "Can't connect to device driver" << endl;
     return -1;
   }
   if (arp==MINET_NOHANDLE && MinetIsModuleInConfig(MINET_ARP_MODULE)) {
     MinetSendToMonitor(MinetMonitoringEvent("Can't accept from arp module"));
-    cout << "Can't accept from arp module" << endl;
+    cerr << "Can't accept from arp module" << endl;
     return -1;
   }
   if (ip==MINET_NOHANDLE && MinetIsModuleInConfig(MINET_IP_MODULE)) {
     MinetSendToMonitor(MinetMonitoringEvent("Can't accept from ip module"));
-    cout << "Can't accept from ip module" << endl;
+    cerr << "Can't accept from ip module" << endl;
     return -1;
   }
   if (other==MINET_NOHANDLE && MinetIsModuleInConfig(MINET_OTHER_MODULE)) {
     MinetSendToMonitor(MinetMonitoringEvent("Can't accept from other module"));
-    cout << "Can't accept from other module" << endl;
+    cerr << "Can't accept from other module" << endl;
     return -1;
   }
 
 
   MinetSendToMonitor(MinetMonitoringEvent("ethernet_mux operating"));
-  cout << "ethernet_mux operating" << endl;
+  cerr << "ethernet_mux operating" << endl;
 
   MinetEvent event;
 
@@ -61,7 +61,7 @@ int main(int argc, char * argv[])
     if (event.eventtype!=MinetEvent::Dataflow 
 	|| event.direction!=MinetEvent::IN) {
       MinetSendToMonitor(MinetMonitoringEvent("Unknown event ignored."));
-      cout << "Unknown event ignored." << endl;
+      cerr << "Unknown event ignored." << endl;
     } else {
       if (event.handle==dd) {
 	RawEthernetPacket raw;
@@ -85,7 +85,7 @@ int main(int argc, char * argv[])
 	RawEthernetPacket p;
 	MinetReceive(arp,p);
 #if DEBUG_ARP
-	cout << "Writing out ARP Packet: " << p << endl;
+	cerr << "Writing out ARP Packet: " << p << endl;
 #endif
 	MinetSend(dd,p);
       }
@@ -94,7 +94,7 @@ int main(int argc, char * argv[])
 	MinetReceive(ip,p);
 	
 #if DEBUG_SEND
-	cout << "ABOUT TO SEND OUT: " << endl;
+	cerr << "ABOUT TO SEND OUT: " << endl;
 	Packet check(p);
 	check.ExtractHeaderFromPayload<EthernetHeader>(ETHERNET_HEADER_LEN);
 	check.ExtractHeaderFromPayload<IPHeader>(IPHeader::EstimateIPHeaderLength(check));
@@ -106,7 +106,7 @@ int main(int argc, char * argv[])
 	eh.Print(cerr);  cerr << endl;
 	iph.Print(cerr); cerr << endl;
 	icmph.Print(cerr);  cerr << endl;
-	cout << "END OF PACKET" << endl << endl;
+	cerr << "END OF PACKET" << endl << endl;
 #endif
 
 	MinetSend(dd,p);

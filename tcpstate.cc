@@ -122,10 +122,13 @@ bool TCPState::SetLastRecvd(unsigned int lastrecvd, unsigned int length)
 	if(length <= N && RecvBuffer.GetSize() + length <= TCP_BUFFER_SIZE) {
 	    last_recvd += length;
 	    return true;
+	} else {
+	  return false;
 	}
-    }
-    else
+    } 
+    else {
 	return false;
+    }
 }
 
 inline unsigned int TCPState::GetLastRecvd()

@@ -40,6 +40,7 @@ struct SerializationException {
 #include <algorithm>
 #include <functional>
 
+
 template <class T> 
 inline ostream & operator<< (ostream &lhs, const T &rhs) { return rhs.Print(lhs);} ;
 

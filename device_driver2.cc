@@ -23,10 +23,7 @@ extern "C" {
 
 // device config
 //
-// filter is critical.  This controls what your students will see
-//
 char *device;
-char *filter;
 
 // libnet stuff
 char net_errbuf[LIBNET_ERRORBUF_SIZE];
@@ -85,8 +82,10 @@ void Init()
     cerr << "Set MINET_IPADDR"<<endl;
     exit(-1);
   }
-  sprintf(filter,"host %s or arp",ip);
-  strcpy(pcap_program,filter);
+  //
+  // This is crucial.  It controls what your students will see
+  //
+  sprintf(pcap_program,"host %s or arp",ip);
   cerr <<"pcap_program='"<<pcap_program<<"'"<<endl;
   if (pcap_compile(pcap_interface,&pcap_filter,pcap_program,0,pcap_mask)) {
     cerr<<"Can't compile filter\n";

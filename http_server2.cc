@@ -19,7 +19,7 @@ int main(int argc,char *argv[])
   int rc,i;
   fd_set readlist;
   fd_set connections;
-  int maxfd,minid;
+  int maxfd;
 
   /* parse command line args */
   if (argc != 3)
@@ -143,7 +143,6 @@ int handle_connection(int sock2)
   struct stat filestat;
   char buf[BUFSIZE+1];
   char *headers;
-  char *header;
   char *endheaders;
   char *bptr;
   int datalen=0;

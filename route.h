@@ -54,10 +54,10 @@ struct if_list_t
 
 // Function prototypes relating to route_tables
 route_table_t *make_route_table(void);
-static route_t *make_route(char *net, char *mask, char *iface, char *gateway, 	\
-			   char *flags, char *metric, char *ref, char *use);
+//static route_t *make_route(char *net, char *mask, char *iface, char *gateway, 	
+//			   char *flags, char *metric, char *ref, char *use);
 void load_routes(route_table_t *table, const char *filename);
-void add_route(route_table_t *table, char *net, char *gateway, char* mask, 	        \
+void add_route(route_table_t *table, char *net, char *gateway, char* mask, 	        
 		      char * flags, char *mtric, char *ref, char *use, char *iface);
 void del_route(route_table_t *table, char *net_addr);
 void print_route(route_table_t *table);

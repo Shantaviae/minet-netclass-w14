@@ -90,7 +90,6 @@ int handle_connection(int sock2)
   struct stat filestat;
   char buf[BUFSIZE+1];
   char *headers;
-  char *header;
   char *endheaders;
   char *bptr;
   int datalen=0;
