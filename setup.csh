@@ -3,11 +3,11 @@
 
 
 echo "Setting MINET environment vars"
-setenv MINET_IPADDR "10.10.1.5"
+setenv MINET_IPADDR "10.10.1.10"
 setenv MINET_ETHERNETDEVICE "eth0"
 setenv MINET_ETHERNETADDR `./get_addr.pl $MINET_ETHERNETDEVICE`
-setenv MINET_READER "/home/Minet/execs/reader"
-setenv MINET_WRITER "/home/Minet/execs/writer"
+setenv MINET_READER "/home1/pdinda/netclass-execs/reader"
+setenv MINET_WRITER "/home1/pdinda/netclass-execs/reader"
 setenv MINET_READERBUFFER "100"
 setenv MINET_WRITERBUFFER "100"
 setenv MINET_DEBUGLEVEL "0"

@@ -25,7 +25,8 @@ LIBMINET_OBJS  = \
            tcp.o                                \
            sockint.o                            \
 	   sock_mod_structs.o                   \
-           constate.o
+           constate.o				\
+	   route.o
 
 EXECOBJS_EXCEPT_READER_WRITER =                 \
            monitor.o                            \

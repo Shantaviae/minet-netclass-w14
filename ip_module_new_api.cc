@@ -22,9 +22,12 @@ int main(int argc, char *argv[])
 
   MinetInit(MINET_IP_MODULE);
 
-  ethermux=MinetIsModuleInConfig(MINET_ETHERNET_MUX) ? MinetConnect(MINET_ETHERNET_MUX) : MINET_NOHANDLE;
-  arp=MinetIsModuleInConfig(MINET_ARP_MODULE) ? MinetConnect(MINET_ARP_MODULE) : MINET_NOHANDLE;
-  ipmux=MinetIsModuleInConfig(MINET_IP_MUX) ?MinetAccept(MINET_IP_MUX) : MINET_NOHANDLE;
+  ethermux=MinetIsModuleInConfig(MINET_ETHERNET_MUX) ? 				\
+			MinetConnect(MINET_ETHERNET_MUX) : MINET_NOHANDLE;
+  arp=MinetIsModuleInConfig(MINET_ARP_MODULE) ? 				\
+			MinetConnect(MINET_ARP_MODULE) : MINET_NOHANDLE;
+  ipmux=MinetIsModuleInConfig(MINET_IP_MUX) ?					\
+			MinetAccept(MINET_IP_MUX) : MINET_NOHANDLE;
 
   if (ethermux==MINET_NOHANDLE && MinetIsModuleInConfig(MINET_ETHERNET_MUX)) {
     MinetSendToMonitor(MinetMonitoringEvent("Can't connect to ethermux"));
@@ -62,7 +65,8 @@ int main(int argc, char *argv[])
 	iph.GetDestIP(toip);
 	if (toip==MyIPAddr || toip==IPAddress(IP_ADDRESS_BROADCAST)) {
 	  if (!(iph.IsChecksumCorrect())) {
-	    MinetSendToMonitor(MinetMonitoringEvent("Discarding packet because header checksum is wrong."));
+	    MinetSendToMonitor(MinetMonitoringEvent				\
+			("Discarding packet because header checksum is wrong."));
 	    cerr << "Discarding following packet because header checksum is wrong: "<<p<<"\n";
 	    continue;
 	  }
@@ -71,7 +75,8 @@ int main(int argc, char *argv[])
 	  iph.GetFlags(flags);
 	  iph.GetFragOffset(fragoff);
 	  if ((flags&IP_HEADER_FLAG_MOREFRAG) || (fragoff!=0)) { 
-	    MinetSendToMonitor(MinetMonitoringEvent("Discarding packet because it is a fragment"));
+	    MinetSendToMonitor(MinetMonitoringEvent				\
+			("Discarding packet because it is a fragment"));
 	    cerr << "Discarding following packet because it is a fragment: "<<p<<"\n";
 	    cerr << "NOTE: NO ICMP PACKET WAS SENT BACK\n";
 	    continue;
@@ -115,7 +120,8 @@ int main(int argc, char *argv[])
 	  RawEthernetPacket e(p);
 	  MinetSend(ethermux,e);
 	} else {
-	  MinetSendToMonitor(MinetMonitoringEvent("Discarding packet because there is no arp entry"));
+	  MinetSendToMonitor(MinetMonitoringEvent 				\
+			("Discarding packet because there is no arp entry"));
 	  cerr << "Discarded IP packet because there is no arp entry\n";
 	}
       }

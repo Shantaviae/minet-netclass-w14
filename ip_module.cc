@@ -10,113 +10,82 @@
 #include <fcntl.h>
 #include <errno.h>
 
-
 #include <iostream>
-#include "config.h"
-#include "ip.h"
-#include "arp.h"
-#include "packet.h"
-#include "ethernet.h"
-#include "raw_ethernet_packet.h"
-#include "route.h"
 
-#define ETHER_MUX 1
-#define IP_MUX    1
-#define ARP       1
+#include "route.h"
+#include "Minet.h"
 
 
 int main(int argc, char *argv[])
 {
-#if ETHER_MUX
-  int fromethermux, toethermux;
-#endif
-#if IP_MUX
-  int fromipmux, toipmux;
-#endif
-#if ARP
-  int fromarp, toarp;
-#endif
+  MinetHandle ethermux, ipmux, arp;
 
-#if ETHER_MUX
-  fromethermux=open(mux2ip_fifo_name,O_RDONLY);
-  toethermux=open(ip2mux_fifo_name,O_WRONLY);
-#endif
-#if IP_MUX
-  toipmux=open(ip2ipmux_fifo_name,O_WRONLY);
-  fromipmux=open(ipmux2ip_fifo_name,O_RDONLY);
-#endif
-#if ARP
-  toarp=open(ip2arp_fifo_name,O_WRONLY);
-  fromarp=open(arp2ip_fifo_name,O_RDONLY);
-#endif
+  MinetInit(MINET_IP_MODULE);
 
-#if ETHER_MUX
-  if (toethermux<0 || fromethermux<0) {
-    cerr << "Can't open connection to ethernet mux\n";
+  ethermux=MinetIsModuleInConfig(MINET_ETHERNET_MUX) ? 				\
+			MinetConnect(MINET_ETHERNET_MUX) : MINET_NOHANDLE;
+  arp=MinetIsModuleInConfig(MINET_ARP_MODULE) ? 				\
+			MinetConnect(MINET_ARP_MODULE) : MINET_NOHANDLE;
+  ipmux=MinetIsModuleInConfig(MINET_IP_MUX) ?					\
+			MinetAccept(MINET_IP_MUX) : MINET_NOHANDLE;
+
+  if (ethermux==MINET_NOHANDLE && MinetIsModuleInConfig(MINET_ETHERNET_MUX)) {
+    MinetSendToMonitor(MinetMonitoringEvent("Can't connect to ethermux"));
+    cout << "Can't connect to ethermux" << endl;
     return -1;
   }
-#endif
-
-#if IP_MUX
-  if (toipmux<0 || fromipmux<0) {
-    cerr << "Can't open connection to IP mux\n";
+  if (ipmux==MINET_NOHANDLE && MinetIsModuleInConfig(MINET_ETHERNET_MUX)) {
+    MinetSendToMonitor(MinetMonitoringEvent("Can't accept from ipmux"));
+    cout << "Can't accept from ipmux" << endl;
     return -1;
   }
-#endif
-
-#if ARP
-  if (toarp<0 || fromarp<0) {
-    cerr << "Can't open connection to ARP module\n";
+  if (arp==MINET_NOHANDLE && MinetIsModuleInConfig(MINET_ETHERNET_MUX)) {
+    MinetSendToMonitor(MinetMonitoringEvent("Can't connect to arp_module"));
+    cout << "Can't connect to arp_module" << endl;
     return -1;
   }
-#endif
 
-  cerr << "ip_module handling IP traffic...\n";
 
-  int maxfd=0;
-  fd_set read_fds;
-  int rc;
+  MinetSendToMonitor(MinetMonitoringEvent("ip_module handling IP traffic........"));
+  cout << "ip_module handling IP traffic......" << endl;
 
-  while (1) {
-    maxfd=0;
-    FD_ZERO(&read_fds);
-#if ETHER_MUX
-    FD_SET(fromethermux,&read_fds); maxfd=MAX(maxfd,fromethermux);
-#endif
-#if IP_MUX
-    FD_SET(fromipmux,&read_fds); maxfd=MAX(maxfd,fromipmux);
-#endif
+  // Initializing route table
+  route_table_t *table = (route_table_t *)malloc(sizeof(route_table_t));
+  table = make_route_table();
+  load_routes(table, "route_table.txt");
+  print_route(table); 
 
-    
-    rc=select(maxfd+1,&read_fds,0,0,0);
+  // Initializing interface list
+  if_list_t *if_list = (if_list_t *)malloc(sizeof(if_list));
+  if_list = make_if_list();
+ 
+  add_intface(if_list, "eth0", "u", ipToString(MyIPAddr), ethToString(MyEthernetAddr)); 
+  add_intface(if_list, "lo", "u", ipToString(IP_ADDRESS_LO), "*");
+  print_if_list(if_list);
+  
 
-    if (rc<0) { 
-      if (errno==EINTR) { 
-	continue;
-      } else {
-	cerr << "Unknown error in select\n";
-	return -1;
-      }
-    } else if (rc==0) { 
-      cerr << "Unexpected timeout in select\n";
-      return -1;
+  MinetEvent event;
+
+  while (MinetGetNextEvent(event)==0) {
+    if (event.eventtype!=MinetEvent::Dataflow 
+	|| event.direction!=MinetEvent::IN) {
+      MinetSendToMonitor(MinetMonitoringEvent("Unknown event ignored."));
     } else {
-#if ETHER_MUX
-      if (FD_ISSET(fromethermux,&read_fds)) { 
+      if (event.handle==ethermux) {
 	RawEthernetPacket raw;
-	raw.Unserialize(fromethermux);
+	MinetReceive(ethermux,raw);
 	Packet p(raw);
 	p.ExtractHeaderFromPayload<EthernetHeader>(ETHERNET_HEADER_LEN);
 	p.ExtractHeaderFromPayload<IPHeader>(IPHeader::EstimateIPHeaderLength(p));
 	IPHeader iph;
 	iph=p.FindHeader(Headers::IPHeader);
-	EthernetHeader eh;
-	eh = p.FindHeader(Headers::EthernetHeader);
 
 	IPAddress toip;
 	iph.GetDestIP(toip);
 	if (toip==MyIPAddr || toip==IPAddress(IP_ADDRESS_BROADCAST)) {
 	  if (!(iph.IsChecksumCorrect())) {
+	    MinetSendToMonitor(MinetMonitoringEvent				\
+			("Discarding packet because header checksum is wrong."));
 	    cerr << "Discarding following packet because header checksum is wrong: "<<p<<"\n";
 	    continue;
 	  }
@@ -125,62 +94,56 @@ int main(int argc, char *argv[])
 	  iph.GetFlags(flags);
 	  iph.GetFragOffset(fragoff);
 	  if ((flags&IP_HEADER_FLAG_MOREFRAG) || (fragoff!=0)) { 
+	    MinetSendToMonitor(MinetMonitoringEvent				\
+			("Discarding packet because it is a fragment"));
 	    cerr << "Discarding following packet because it is a fragment: "<<p<<"\n";
 	    cerr << "NOTE: NO ICMP PACKET WAS SENT BACK\n";
 	    continue;
 	  }
-
 	  
+          // Printing incoming RawEthernetPackets from Ethermux
 	  Buffer payload = p.GetPayload();
-	  // Printing incoming RawEthernetPackets from the EtherMux
-	  cerr << "===========================================\n";
-	  cerr << "Incoming RawEthernetPackets from EtherMux: \n";	
-          cerr << "EthernetHeader: \n";
-	  cerr << eh << "\n";
-	  cerr << "IPHeader: \n";
-	  cerr << iph << "\n";
-	  cerr << "Data: \n";
-	  cerr << "===========================================\n";	  
-   
-#if IP_MUX
-	  p.Serialize(toipmux);
-#else
-#endif
-	} 
-	else {
+	  cout << "=============================================================\n";
+          cout << "Incoming RawEthernetPackets from EtherMux: \n";
+          cout << "EthernetHeader: \n";
+          cout << raw << "\n";
+          cout << "IPHeader: \n";
+          cout << iph << "\n";
+          cout << "Data: \n";
+          cout << payload << endl;
+          cout << "=============================================================\n";
+	  MinetSend(ipmux,p);
+	} else {
 	  // discarded due to different target address
 	}
       }
-#endif
-
-#if IP_MUX
-      if (FD_ISSET(fromipmux,&read_fds)) {
+      if (event.handle==ipmux) {
 	Packet p;
-	p.Unserialize(fromipmux);
+	MinetReceive(ipmux,p);
 	IPHeader iph = p.FindHeader(Headers::IPHeader);
 
 	// ROUTE
-        // Loading up the routing table
-
-
-        
 	IPAddress ipaddr;
+	route_t   *matched;
+        
 	iph.GetDestIP(ipaddr);
-	
-	if(ipaddr == IP_ADDRESS_LO) {
-	  cerr << "This packet has destination IP 127.0.0.1\n";
-	  cerr << "It's forwarded back up the stack\n";
-	  p.Serialize(toipmux);
-	}
-	
-	else {
-	  ARPRequestResponse req(ipaddr,
-			       EthernetAddr(ETHERNET_BLANK_ADDR),
-			       ARPRequestResponse::REQUEST);
- 	  ARPRequestResponse resp;
 
-	  req.Serialize(toarp);
-	  resp.Unserialize(fromarp);
+	matched = match_route(table, ipToString(ipaddr));
+	cout << "From routing table. net: " << matched->net << endl;
+
+	if(IPAddress(matched->net) == IP_ADDRESS_LO || ipaddr == MyIPAddr) {
+	  cout << "Packet is bound for local address" << endl;
+	  MinetSend(ipmux, p);
+	}
+	else {
+	  cout << "arp request for " << ipaddr << endl;
+	  ARPRequestResponse req(ipaddr,
+				 EthernetAddr(ETHERNET_BLANK_ADDR),
+				 ARPRequestResponse::REQUEST);
+	  ARPRequestResponse resp;
+
+	  MinetSend(arp,req);
+	  MinetReceive(arp,resp);
 
 	  if (resp.ethernetaddr!=ETHERNET_BLANK_ADDR) {
 	    resp.flag=ARPRequestResponse::RESPONSE_OK;
@@ -196,26 +159,28 @@ int main(int argc, char *argv[])
 	    h.SetProtocolType(PROTO_IP);
 	    p.PushHeader(h);
 	    RawEthernetPacket e(p);
-	    e.Serialize(toethermux);
 
+	    // Printing outgoing RawEthernetPackets from IPmux
 	    Buffer payload = p.GetPayload();
-            // Printing outgoing RawEthernetPackets from the IPMux
-            cerr << "===========================================\n";
-            cerr << "Outgoing RawEthernetPackets from IPMux: \n";
-            cerr << "EthernetHeader: \n";
-            cerr << h << "\n";
-            cerr << "IPHeader: \n";
-            cerr << iph << "\n";
-            cerr << "Data: \n";
-            cerr << "===========================================\n";
-	  } 
-	  else {
+	    cout << "=============================================================\n";
+	    cout << "Outgoing RawEthernetPackets from IPMux: \n";
+	    cout << "EthernetHeader: \n";
+	    cout << h << "\n";
+	    cout << "IPHeader: \n";
+	    cout << iph << "\n";
+	    cout << "Data: \n";
+	    cout << payload << endl;
+	    cout << "=============================================================\n";
+	    MinetSend(ethermux,e);
+	  } else {
+	    MinetSendToMonitor(MinetMonitoringEvent 				\
+			       ("Discarding packet because there is no arp entry"));
 	    cerr << "Discarded IP packet because there is no arp entry\n";
 	  }
 	}
       }
-#endif
     }
   }
+  MinetDeinit();
   return 0;
 }
