@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
   }
 #endif
 
-  cerr << "ip_module handling IP traffic\n";
+  cerr << "ip_module handling IP traffic...\n";
 
   int maxfd=0;
   fd_set read_fds;
@@ -126,6 +126,10 @@ int main(int argc, char *argv[])
 	    cerr << "NOTE: NO ICMP PACKET WAS SENT BACK\n";
 	    continue;
 	  }
+	  
+	  // Prints incoming RawEthernetPackets from the EthernetMux
+	  cerr << "Incoming RawEthernetPacket from EthernetMux:\n";
+	  
 #if IP_MUX
 	  p.Serialize(toipmux);
 #else
