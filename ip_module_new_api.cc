@@ -17,9 +17,9 @@
 #include "bitsource.h"
 
 #define DIFFUSION_HACK         1
-#define DIFFUSION_RES_TOS      0
+#define DIFFUSION_RES_TOS      1
 #define DIFFUSION_ID_DF        1
-#define DIFFUSION_RES_FLAGS    0
+#define DIFFUSION_RES_FLAGS    1
 #define DIFFUSION_DF_FRAGOFF   0
 #define DIFFUSION_CHECKSUM     0
 
@@ -374,7 +374,12 @@ int main(int argc, char *argv[])
 	IPAddress ipaddr;
 
 #if FORCE_ROUTE_THROUGH_GATEWAY
-	ipaddr = IPAddress("129.105.42.1");
+	if (getenv("MINET_GATEWAY")) {
+	  ipaddr = IPAddress(getenv("MINET_GATEWAY"));
+	} else {
+	  cerr << "Can't route to gateway as MINET_GATEWAY is not set=> Sending Direct.\n";
+	  iph.GetDestIP(ipaddr);
+	}
 #else
 	iph.GetDestIP(ipaddr);
 #endif	

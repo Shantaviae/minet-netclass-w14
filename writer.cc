@@ -105,8 +105,8 @@ int main(int argc, char *argv[])
     cerr << "writer: launch packet "<<nout<< " with header "<<eh<<" and length="<<p.size<<endl;
     
     if (libnet_write_link_layer(interface,
-				(u_char *)device,
-				(u_char*)(p.data),
+				(const char *)device,
+				(u_char *)(p.data),
 				p.size)<0) {
       cerr << "Can't write output packet "<<nout<<" to link\n";
       if (writeall(fileno(stdout),(char*)&fail,sizeof(fail),0,1)!=sizeof(fail)) { 

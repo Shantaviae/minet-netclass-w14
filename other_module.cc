@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
   MinetEvent event;
   int rc;
 
-  while (MinetGetNextEvent(event)) {
+  while (MinetGetNextEvent(event)==0) {
     if (event.eventtype!=MinetEvent::Dataflow 
 	|| event.direction!=MinetEvent::IN) {
       MinetSendToMonitor(MinetMonitoringEvent("Unknown event ignored."));
@@ -42,6 +42,7 @@ int main(int argc, char *argv[])
       if (event.handle==mux) {
 	RawEthernetPacket raw;
 	MinetReceive(mux,raw);
+	cerr << raw << endl;
       }
     }
   }
