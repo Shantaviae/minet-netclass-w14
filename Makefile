@@ -5,6 +5,8 @@ LIBMINET = libminet.a
 LIBMINET_SOCK_OBJS = minet_socket.o
 
 LIBMINET_OBJS  = \
+           Minet.o                              \
+           Monitor.o                            \
            config.o 				\
            buffer.o 				\
            error.o 				\
@@ -18,28 +20,25 @@ LIBMINET_OBJS  = \
            debug.o                              \
            arp.o                                \
            ip.o                                 \
+           icmp.o                               \
            udp.o                                \
            tcp.o                                \
            sockint.o                            \
 	   sock_mod_structs.o                   \
-           constate.o                           \
-	   route.o				\
-	   icmp.o
+           constate.o
 
 EXECOBJS_EXCEPT_READER_WRITER =                 \
+           monitor.o                            \
            device_driver.o                      \
            ethernet_mux.o			\
            arp_module.o                         \
            ip_module.o                          \
            other_module.o                       \
            ip_mux.o                             \
+           icmp_module.o                        \
            udp_module.o                         \
            tcp_module.o                         \
            app.o				\
-           shim_udp_sock.o                      \
-           shim_tcp_sock.o                      \
-           shim_ipmux_udp.o                     \
-           shim_ipmux_tcp.o                     \
            sock_module.o                        \
            udp_client.o                         \
            udp_server.o                         \
@@ -48,8 +47,11 @@ EXECOBJS_EXCEPT_READER_WRITER =                 \
            tcp_client.o                         \
            tcp_server.o                         \
            sock_test_app.o                      \
-           sock_test_tcp.o			\
-	   icmp_module.o
+           sock_test_tcp.o                      \
+           test_reader.o                        \
+           test_writer.o                        \
+           test_arp.o                           \
+           test_raw_ethernet_packet_buffer.o    \
 
 
 READER_WRITER_EXECOBJS=reader.o writer.o
@@ -116,6 +118,8 @@ reader.o : reader.cc
 writer.o : writer.cc
 	$(CXX) $(WRITERCXXFLAGS) -c $< -o $(@F)
 
+#ip_module:
+#	cp /home1/pdinda/netclass-execs/ip_module ip_module 
 
 depend:
 	$(CXX) $(CXXFLAGS) $(READERCXXFLAGS) $(WRITERCXXFLAGS)  -MM $(OBJS:.o=.cc) > .dependencies
