@@ -9,6 +9,11 @@ extern "C" {
 
 #include "Minet.h"
 
+//
+// Define this to be nonzero if you're using libnet 1.1 instead of 1.0
+//
+#define LIBNET11 1
+
 
 /*
    Simpler device driver for Minet
@@ -17,12 +22,19 @@ extern "C" {
 
 
 // device config
+//
+// filter is critical.  This controls what your students will see
+//
 char *device;
-char *filter="arp or net 129.105.42.2/32";
+char *filter;
 
 // libnet stuff
 char net_errbuf[LIBNET_ERRORBUF_SIZE];
+#if LIBNET11
+libnet_t *net_interface;
+#else
 struct libnet_link_int *net_interface;
+#endif
 
 // libpcap stuff
 const int pcap_proglen=10240;
@@ -48,7 +60,11 @@ void Init()
   }
   
   // establish libnet session
+#if LIBNET11
+  net_interface=libnet_init(LIBNET_LINK_ADV,device,net_errbuf);
+#else
   net_interface=libnet_open_link_interface(device,net_errbuf);
+#endif
   if (net_interface==NULL) { 
     cerr<<"Can't open interface: "<<net_errbuf<<endl;
     exit(-1);
@@ -64,6 +80,12 @@ void Init()
     cerr<< "Can't open "<<device<<":"<<pcap_errbuf<<endl;
     exit(-1);
   }
+  char *ip=getenv("MINET_IPADDR");
+  if (ip==0) { 
+    cerr << "Set MINET_IPADDR"<<endl;
+    exit(-1);
+  }
+  sprintf(filter,"host %s or arp",ip);
   strcpy(pcap_program,filter);
   cerr <<"pcap_program='"<<pcap_program<<"'"<<endl;
   if (pcap_compile(pcap_interface,&pcap_filter,pcap_program,0,pcap_mask)) {
@@ -106,10 +128,36 @@ void ProcessOutgoing()
 
   MinetReceive(ethermux_handle,p);
 
+  //
+  //
+  // Make sure that the packet is allowed to be sent
+  //
+  Packet cp(p);
+  cp.ExtractHeaderFromPayload<EthernetHeader>(ETHERNET_HEADER_LEN);
+  EthernetHeader eh=cp.FindHeader(Headers::EthernetHeader);
+  EthernetAddr ea;
+  EthernetProtocol ep;
+  eh.GetSrcAddr(ea);
+  eh.GetProtocolType(ep);
+  
+  
+  if (ea!=MyEthernetAddr || (ep!=PROTO_ARP && ep!=PROTO_IP)) {
+    cerr << "discarding packet "<<p<<endl;
+    MinetSendToMonitor(MinetMonitoringEvent("dropped illegal outgoing packet"));
+    return;
+  }
+  
+
+#if LIBNET11
+  if (libnet_adv_write_link(net_interface,
+			      (u_char *)(p.data),
+			      p.size)<0) {
+#else
   if (libnet_write_link_layer(net_interface,
 			      (const char *)device,
 			      (u_char *)(p.data),
 			      p.size)<0) {
+#endif
       cerr << "Can't write output packet to link\n";
       exit(-1);
   }

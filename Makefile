@@ -72,8 +72,17 @@ EXECOBJS = $(EXECOBJS_EXCEPT_READER_WRITER) $(READER_WRITER_EXECOBJS)
 
 OBJS     = $(LIBMINET_OBJS) $(LIBMINET_SOCK_OBJS) $(EXECOBJS)
 
-LIBNETCFLAGS  = `libnet-config --defines`
-LIBNETLDFLAGS = `libnet-config --libs`
+#
+# This is for libnet 1.0
+#
+#LIBNETCFLAGS  = `libnet-config --defines`
+#LIBNETLDFLAGS = `libnet-config --libs`
+#
+# And this is for libnet 1.1
+#
+LIBNETCFLAGS  = 
+LIBNETLDFLAGS = -lnet
+
 
 PCAPCFLAGS  = -I/usr/include/pcap
 PCAPLDFLAGS = -lpcap
