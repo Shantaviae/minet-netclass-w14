@@ -20,6 +20,7 @@ LIBMINET_OBJS  = \
            debug.o                              \
            arp.o                                \
            ip.o                                 \
+           icmp.o                               \
            udp.o                                \
            tcp.o                                \
            sockint.o                            \
@@ -33,6 +34,7 @@ EXECOBJS_EXCEPT_READER_WRITER =                 \
            ip_module.o                          \
            other_module.o                       \
            ip_mux.o                             \
+           icmp_module.o                        \
            udp_module.o                         \
            tcp_module.o                         \
            app.o				\

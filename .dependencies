@@ -1,3 +1,5 @@
+Minet.o: Minet.cc Minet.h error.h config.h util.h
+Monitor.o: Monitor.cc Minet.h Monitor.h util.h
 config.o: config.cc config.h
 buffer.o: buffer.cc buffer.h config.h util.h
 error.o: error.cc error.h
@@ -20,7 +22,8 @@ debug.o: debug.cc debug.h
 arp.o: arp.cc arp.h raw_ethernet_packet.h config.h packet.h buffer.h \
  util.h headertrailer.h ethernet.h ip.h
 ip.o: ip.cc ip.h headertrailer.h config.h buffer.h util.h packet.h \
- raw_ethernet_packet.h
+ raw_ethernet_packet.h error.h
+icmp.o: icmp.cc icmp.h
 udp.o: udp.cc udp.h packet.h config.h buffer.h util.h headertrailer.h \
  raw_ethernet_packet.h ip.h
 tcp.o: tcp.cc tcp.h config.h packet.h buffer.h util.h headertrailer.h \
@@ -51,6 +54,9 @@ other_module.o: other_module.cc config.h packet.h buffer.h util.h \
  headertrailer.h raw_ethernet_packet.h ethernet.h
 ip_mux.o: ip_mux.cc /usr/include/netinet/in.h debug.h config.h \
  packet.h buffer.h util.h headertrailer.h raw_ethernet_packet.h ip.h
+icmp_module.o: icmp_module.cc config.h ip.h headertrailer.h buffer.h \
+ util.h packet.h raw_ethernet_packet.h arp.h ethernet.h udp.h \
+ constate.h sockint.h sock.h tcp.h
 udp_module.o: udp_module.cc config.h ip.h headertrailer.h buffer.h \
  util.h packet.h raw_ethernet_packet.h arp.h ethernet.h udp.h \
  constate.h sockint.h sock.h tcp.h
@@ -58,18 +64,6 @@ tcp_module.o: tcp_module.cc config.h ip.h headertrailer.h buffer.h \
  util.h packet.h raw_ethernet_packet.h arp.h ethernet.h udp.h tcp.h \
  sockint.h sock.h
 app.o: app.cc minet_socket.h
-shim_udp_sock.o: shim_udp_sock.cc config.h shim.h util.h sockint.h \
- sock.h buffer.h ip.h headertrailer.h packet.h raw_ethernet_packet.h \
- udp.h tcp.h
-shim_tcp_sock.o: shim_tcp_sock.cc config.h shim.h util.h sockint.h \
- sock.h buffer.h ip.h headertrailer.h packet.h raw_ethernet_packet.h \
- udp.h tcp.h
-shim_ipmux_udp.o: shim_ipmux_udp.cc config.h shim.h util.h sockint.h \
- sock.h buffer.h ip.h headertrailer.h packet.h raw_ethernet_packet.h \
- udp.h tcp.h
-shim_ipmux_tcp.o: shim_ipmux_tcp.cc config.h shim.h util.h sockint.h \
- sock.h buffer.h ip.h headertrailer.h packet.h raw_ethernet_packet.h \
- udp.h tcp.h
 sock_module.o: sock_module.cc config.h ip.h headertrailer.h buffer.h \
  util.h packet.h raw_ethernet_packet.h arp.h ethernet.h udp.h \
  sockint.h sock.h tcp.h sock_mod_structs.h

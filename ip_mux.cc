@@ -18,7 +18,7 @@
 
 #define UDP   1
 #define TCP   1
-#define ICMP  0
+#define ICMP  1
 #define OTHER 0
 
 

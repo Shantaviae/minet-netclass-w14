@@ -584,7 +584,7 @@ MinetHandle MinetConnect(const MinetModule &mod,
     con.from=open(fifofrom,O_RDONLY);
   }
 
-  MyFifos.pushback(con);
+  MyFifos.push_back(con);
   return con.h;
 }
 
@@ -828,7 +828,7 @@ MinetHandle MinetAccept(const MinetModule &mod,
     con.from=open(fifofrom,O_RDONLY);
   }
 
-  MyFifos.pushback(con);
+  MyFifos.push_back(con);
   return con.h;
 }
 
@@ -840,7 +840,7 @@ int         MinetClose(const MinetHandle &mh)
   if (x!=MyFifos.end()) { 
     close((*x).from);
     close((*x).to);
-    MyFifos.delete(x);
+    MyFifos.erase(x);
   }
   return 0;
 }

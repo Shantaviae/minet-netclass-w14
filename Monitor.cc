@@ -126,7 +126,7 @@ void MinetMonitoringEvent::Unserialize(const int fd)
 
 ostream & MinetMonitoringEvent::Print(ostream &os) const
 {
-  os << "MinetMonitoringEvent("<<(*((string *)this))<<")";`
+  os << "MinetMonitoringEvent("<<(*((string *)this))<<")";
   return os;
 }
 

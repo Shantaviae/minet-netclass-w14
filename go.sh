@@ -9,6 +9,7 @@ rm -f pids
 ./ip_mux.sh 
 ./shim_ipmux_udp.sh
 ./shim_ipmux_tcp.sh
+./icmp_module.sh
 ./udp_module.sh 
 ./shim_udp_sock.sh
 ./tcp_module.sh 
