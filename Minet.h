@@ -26,7 +26,7 @@ enum MinetModule {
 
 
 struct MinetEvent {
-   enum {Dataflow, Monitor, Exception, Timeout, Error } eventtype;
+   enum {Dataflow, Exception, Timeout, Error }          eventtype;
    enum {IN, OUT, INOUT, NONE}                          direction; 
    int                                                  handle;
    int                                                  errno;
