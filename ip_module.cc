@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
   }
 #endif
 
-  cerr << "ip_module handling IP traffic...\n";
+  cerr << "ip_module handling IP traffic..!\n";
 
   int maxfd=0;
   fd_set read_fds;
