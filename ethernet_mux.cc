@@ -88,6 +88,21 @@ int main(int argc, char * argv[])
       if (event.handle==ip) {
 	RawEthernetPacket p;
 	MinetReceive(ip,p);
+	
+	cout << "ABOUT TO SEND OUT: " << endl;
+	Packet check(p);
+	check.ExtractHeaderFromPayload<EthernetHeader>(ETHERNET_HEADER_LEN);
+	check.ExtractHeaderFromPayload<IPHeader>(IPHeader::EstimateIPHeaderLength(check));
+	check.ExtractHeaderFromPayload<ICMPHeader>(ICMP_HEADER_LENGTH);
+	EthernetHeader eh = check.FindHeader(Headers::EthernetHeader);
+	IPHeader iph = check.FindHeader(Headers::IPHeader);
+	ICMPHeader icmph = check.FindHeader(Headers::ICMPHeader);
+	
+	eh.Print(cerr);  cerr << endl;
+	iph.Print(cerr); cerr << endl;
+	icmph.Print(cerr);  cerr << endl;
+	cout << "END OF PACKET" << endl << endl;
+
 	MinetSend(dd,p);
       }
       if (event.handle==other) {

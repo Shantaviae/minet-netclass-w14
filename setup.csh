@@ -1,16 +1,14 @@
 #! /bin/csh
 
-
-
 echo "Setting MINET environment vars"
-setenv MINET_IPADDR "10.10.1.10"
+setenv MINET_IPADDR "10.10.2.0"
 setenv MINET_ETHERNETDEVICE "eth0"
 setenv MINET_ETHERNETADDR `./get_addr.pl $MINET_ETHERNETDEVICE`
 setenv MINET_READER "/home/Minet/execs/reader"
 setenv MINET_WRITER "/home/Minet/execs/writer"
 setenv MINET_READERBUFFER "100"
 setenv MINET_WRITERBUFFER "100"
-setenv MINET_DEBUGLEVEL "0"
+setenv MINET_DEBUGLEVEL "2"
 # log xterm gdb
 setenv MINET_DISPLAY xterm
 setenv MINET_MODULES "monitor reader writer device_driver ethernet_mux arp_module ip_module other_module ip_mux icmp_module udp_module tcp_module ipother_module sock_module socklib_module"

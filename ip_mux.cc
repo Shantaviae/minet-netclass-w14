@@ -63,30 +63,45 @@ int main(int argc, char * argv[])
 	unsigned char proto;
 	MinetReceive(ip,p);
 	IPHeader iph=p.FindHeader(Headers::IPHeader);
-	iph.GetProtocol(proto);
-	switch (proto) {
-	case IP_PROTO_UDP:
-	  if (udp!=MINET_NOHANDLE) {
-	    MinetSend(udp,p);
+	unsigned char time_to_live;  iph.GetTTL(time_to_live);
+	if ((unsigned(time_to_live)) == 0) {
+	  // discard the packet
+	  MinetSendToMonitor(MinetMonitoringEvent("Discarding incoming IP Packet because time to live is zero"));
+	  IPAddress source;  iph.GetSourceIP(source);
+	  icmp_packet error(source, TIME_EXCEEDED, TTL_EQUALS_ZERO_DURING_TRANSIT, p);
+	  MinetSendToMonitor(MinetMonitoringEvent("ICMP error message has been sent to host"));
+	  MinetSend(ip, error);
+	}
+	else {
+	  iph.GetProtocol(proto);
+	  switch (proto) {
+	  case IP_PROTO_UDP:
+	    if (udp!=MINET_NOHANDLE) {
+	      MinetSend(udp,p);
+	    }
+	    break;
+	  case IP_PROTO_TCP:
+	    if (tcp!=MINET_NOHANDLE) { 
+	      MinetSend(tcp,p);
+	    }
+	    break;
+	  case IP_PROTO_ICMP:
+	    if (icmp!=MINET_NOHANDLE) {
+	      MinetSend(icmp,p);
+	    }
+	    break;
+	  default:
+	    if (other!=MINET_NOHANDLE) { 
+	      MinetSend(other,p);
+	    } else {
+	      MinetSendToMonitor(MinetMonitoringEvent("Discarding incoming IP Packet of unknown protocol"));
+	      IPAddress source;  iph.GetSourceIP(source);
+	      icmp_packet error(source, DESTINATION_UNREACHABLE, PROTOCOL_UNREACHABLE, p);
+	      MinetSendToMonitor(MinetMonitoringEvent("ICMP error message has been sent to host"));
+	      MinetSend(ip, error);
+	    }
+	    break;
 	  }
-	  break;
-	case IP_PROTO_TCP:
-	  if (tcp!=MINET_NOHANDLE) { 
-	    MinetSend(tcp,p);
-	  }
-	  break;
-	case IP_PROTO_ICMP:
-	  if (icmp!=MINET_NOHANDLE) {
-	    MinetSend(icmp,p);
-	  }
-	  break;
-	default:
-	  if (other!=MINET_NOHANDLE) { 
-	    MinetSend(other,p);
-	  } else {
-	    MinetSendToMonitor(MinetMonitoringEvent("Discarding incoming IP Packet of unknown protocol"));
-	  }
-	  break;
 	}
       }
       if (event.handle==udp) {
@@ -102,6 +117,21 @@ int main(int argc, char * argv[])
       if (event.handle==icmp) {
 	Packet p;
 	MinetReceive(icmp,p);
+
+	  cout << "ABOUT TO SEND OUT: " << endl;
+	  Packet check(p);
+	  check.ExtractHeaderFromPayload<EthernetHeader>(ETHERNET_HEADER_LEN);
+	  check.ExtractHeaderFromPayload<IPHeader>(IPHeader::EstimateIPHeaderLength(check));
+	  check.ExtractHeaderFromPayload<ICMPHeader>(ICMP_HEADER_LENGTH);
+	  EthernetHeader eh = check.FindHeader(Headers::EthernetHeader);
+	  IPHeader iph = check.FindHeader(Headers::IPHeader);
+	  ICMPHeader icmph = check.FindHeader(Headers::ICMPHeader);
+	  
+	  eh.Print(cerr);  cerr << endl;
+	  iph.Print(cerr); cerr << endl;
+	  icmph.Print(cerr);  cerr << endl;
+	  cout << "END OF PACKET" << endl << endl;
+
 	MinetSend(ip,p);
       }
       if (event.handle==other) {

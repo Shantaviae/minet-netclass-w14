@@ -55,6 +55,7 @@ EXECOBJS_EXCEPT_READER_WRITER =                 \
            test_writer.o                        \
            test_arp.o                           \
            test_raw_ethernet_packet_buffer.o    \
+           icmp_app.o
 #           device_driver_new_api.o              \
 
 
@@ -125,15 +126,16 @@ reader.o : reader.cc
 writer.o : writer.cc
 	$(CXX) $(WRITERCXXFLAGS) -c $< -o $(@F)
 
-#ip_module:
-#	cp /home1/pdinda/netclass-execs/ip_module ip_module 
+ip:
+	cp ip_module_new_api ip_module 
 
 depend:
 	$(CXX) $(CXXFLAGS) $(READERCXXFLAGS) $(WRITERCXXFLAGS)  -MM $(OBJS:.o=.cc) > .dependencies
 
 clean: 
-	rm -f $(OBJS) $(EXECOBJS:.o=) $(LIBMINET) $(LIBMINET_SOCK)
+	rm -f $(OBJS) $(EXECOBJS:.o=) $(LIBMINET) $(LIBMINET_SOCK) 
 
 include .dependencies
+
 
 

@@ -7,7 +7,7 @@
 #include <iostream>
 
 namespace Headers {
-  enum HeaderType {EthernetHeader, ARPHeader, IPHeader, UDPHeader, TCPHeader};
+  enum HeaderType {EthernetHeader, ARPHeader, IPHeader, UDPHeader, TCPHeader, ICMPHeader};
 }
 
 namespace Trailers {

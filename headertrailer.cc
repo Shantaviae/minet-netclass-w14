@@ -13,6 +13,8 @@ ostream & operator<< (ostream &os, const Headers::HeaderType &h)
     return (os << "UDPHeader");
   case Headers::TCPHeader:
     return (os << "TCPHeader");
+  case Headers::ICMPHeader:
+    return (os << "ICMPHeader");
   }
   return (os<<"UNKNOWN HEADER TYPE" );
 }

@@ -39,6 +39,7 @@ EXTERNC int minet_deinit ();
 EXTERNC int minet_socket (int type);
   // Create a socket.  Type must be SOCK_STREAM (TCP) 
   // or SOCK_DGRAM (UDP)
+  // or SOCK_ICMP (ICMP)
 
 EXTERNC int minet_bind (int                 sockfd, 
 			struct sockaddr_in *myaddr);

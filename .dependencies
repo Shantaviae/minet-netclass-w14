@@ -29,7 +29,10 @@ arp.o: arp.cc arp.h raw_ethernet_packet.h config.h packet.h buffer.h \
  util.h headertrailer.h ethernet.h ip.h
 ip.o: ip.cc ip.h headertrailer.h config.h buffer.h util.h packet.h \
  raw_ethernet_packet.h error.h
-icmp.o: icmp.cc icmp.h
+icmp.o: icmp.cc icmp.h Minet.h config.h buffer.h util.h debug.h \
+ error.h raw_ethernet_packet.h packet.h headertrailer.h \
+ raw_ethernet_packet_buffer.h ethernet.h arp.h ip.h udp.h tcp.h sock.h \
+ sockint.h sock_mod_structs.h constate.h Monitor.h
 udp.o: udp.cc udp.h packet.h config.h buffer.h util.h headertrailer.h \
  raw_ethernet_packet.h ip.h
 tcp.o: tcp.cc tcp.h config.h packet.h buffer.h util.h headertrailer.h \
@@ -131,6 +134,7 @@ test_arp.o: test_arp.cc config.h ethernet.h raw_ethernet_packet.h \
 test_raw_ethernet_packet_buffer.o: test_raw_ethernet_packet_buffer.cc \
  raw_ethernet_packet_buffer.h raw_ethernet_packet.h config.h packet.h \
  buffer.h util.h headertrailer.h
+icmp_app.o: icmp_app.cc minet_socket.h
 reader.o: reader.cc config.h raw_ethernet_packet.h packet.h buffer.h \
  util.h headertrailer.h debug.h
 writer.o: writer.cc config.h util.h raw_ethernet_packet.h packet.h \

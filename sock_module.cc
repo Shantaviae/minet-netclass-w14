@@ -21,6 +21,7 @@ MinetHandle udp;
 Queue udpq;
 
 MinetHandle icmp;
+Queue icmpq;
 
 MinetHandle ipother;
 
@@ -366,6 +367,246 @@ void ProcessUDPMessage (SockRequestResponse * s, int & respond) {
   }
 }
 
+void SendICMPRequest (SockRequestResponse *s, int sock) {
+  MinetSend(icmp,*s);
+  if (s->type != STATUS) {
+    RequestRecord * elt = new RequestRecord(s, sock);
+    icmpq.Insert((void *) elt);
+  }
+  else
+    delete s;
+}
+
+void ProcessICMPMessage (SockRequestResponse * s, int & respond) {
+  srrType type = s->type;
+  RequestRecord *elt = NULL;
+  SockRequestResponse * request = NULL;
+  SockLibRequestResponse *appmsg = NULL;
+  Buffer *b;
+  int sock;
+
+  // process the message
+  Packet p(s->data);
+  p.ExtractHeaderFromPayload<IPHeader>(IPHeader::EstimateIPHeaderLength(p));
+  p.ExtractHeaderFromPayload<ICMPHeader>(ICMP_HEADER_LENGTH);
+  IPHeader iph = p.FindHeader(Headers::IPHeader);
+  ICMPHeader icmph = p.FindHeader(Headers::ICMPHeader);
+  Buffer &payload = p.GetPayload();
+  unsigned char icmp_type;  unsigned char icmp_code;
+  icmph.GetType(icmp_type);  icmph.GetCode(icmp_code);
+  IPAddress address_mask;
+
+  switch (type) {  
+  case WRITE:
+
+    // sending up to application layer currently is currently not implemented
+    // respond to ICMP packet
+    switch(unsigned (icmp_type)) {
+    case ECHO_REPLY:
+      cerr << "[ECHO REPLY]" << endl;
+      break;
+    case TIMESTAMP_REPLY:
+      cerr << "[TIMESTAMP REPLY]" << endl;
+      unsigned long originate, receive, transmit, current_time;
+      
+      icmph.GetOriginateTimestamp(payload, originate);
+      icmph.GetReceiveTimestamp(payload, receive);
+      icmph.GetTransmitTimestamp(payload, transmit);
+      icmph.GetCurrentTimeInMilliseconds(current_time);
+      
+      cerr << "orig = " << originate << ", recv = " << receive << ", xmit = " << transmit << endl;
+      cerr << "rtt = " << current_time-originate << ", difference = " << transmit-originate << endl;
+      break;
+    case ADDRESSMASK_REPLY:
+      cerr << "[ADDRESS MASK REPLY]" << endl;
+      icmph.GetAddressMask(payload, address_mask);
+      cout << "received address mask: " << address_mask << endl;
+      break;
+    case DESTINATION_UNREACHABLE:
+      switch(unsigned(icmp_code)) {
+      case NETWORK_UNREACHABLE:
+	cerr << "[DESTINATION UNREACHABLE]" << endl;
+	cerr << "NETWORK IS UNREACHABLE" << endl;
+	break;
+      case HOST_UNREACHABLE:
+	cerr << "[DESTINATION UNREACHABLE]" << endl;
+	cerr << "HOST IS UNREACHABLE" << endl;
+	break;
+      case PROTOCOL_UNREACHABLE:
+	cerr << "[DESTINATION UNREACHABLE]" << endl;
+	cerr << "PROTOCOL IS UNREACHABLE" << endl;
+	break;
+      case PORT_UNREACHABLE:
+	cerr << "[DESTINATION UNREACHABLE]" << endl;
+	cerr << "PORT IS UNREACHABLE" << endl;
+	break;
+      case FRAGMENTATION_NEEDED:
+	cerr << "[DESTINATION UNREACHABLE]" << endl;
+	cerr << "FRAGMENTATION NEEDED" << endl;
+	break;
+      case SOURCE_ROUTE_FAILED:
+	cerr << "[DESTINATION UNREACHABLE]" << endl;
+	cerr << "SOURCE ROUTE FAILED" << endl;
+	break;
+      }
+      break;
+    case REDIRECT:
+      switch(unsigned(icmp_code)) {
+      case REDIRECT_FOR_NETWORK:
+	cerr << "[REDIRECT]" << endl;
+	cerr << "REDIRECT FOR NETWORK" << endl;
+	break;
+      case REDIRECT_FOR_HOST:
+	cerr << "[REDIRECT]" << endl;
+	cerr << "REDIRECT FOR HOST" << endl;
+	break;
+      case REDIRECT_FOR_TOS_NETWORK:
+	cerr << "[REDIRECT]" << endl;
+	cerr << "REDIRECT FOR TYPE OF SERVICE NETWORK" << endl;
+	break;
+      case REDIRECT_FOR_TOS_HOST:
+	cerr << "[REDIRECT]" << endl;
+	cerr << "REDIRECT FOR TYPE OF SERVICE HOST" << endl;
+	break;
+      }
+      break;
+    case SOURCE_QUENCH:
+      cerr << "[SOURCE QUENCH]" << endl;
+      break;
+    case TIME_EXCEEDED:
+      switch(unsigned(icmp_code)) {
+      case TTL_EQUALS_ZERO_DURING_TRANSIT:
+	cerr << "[TIME EXCEEDED]" << endl;
+	cerr << "TIME TO LIVE EQUALS ZERO DURING TRANSIT" << endl;
+	break;
+      case TTL_EQUALS_ZERO_DURING_REASSEMBLY:
+	cerr << "[TIME EXCEEDED]" << endl;
+	cerr << "TIME TO LIVE EQUALS ZERO DURING REASSEMBLY" << endl;
+	break;
+      }
+      break;
+    case PARAMETER_PROBLEM:
+      switch(unsigned(icmp_code)) {
+      case IP_HEADER_BAD:
+	cerr << "[PARAMETER PROBLEM]" << endl;
+	cerr << "IP HEADER BAD" << endl;
+	break;
+      case REQUIRED_OPTION_MISSING:
+	cerr << "[PARAMETER PROBLEM]" << endl;
+	cerr << "REQUIRED OPTION MISSING" << endl;
+	break;
+      }
+      break;
+    }
+
+    respond = 1;
+    s->type = STATUS;
+    sock = socks.FindConnection(s->connection);
+    if (sock <= 0) {
+      s->bytes = 0;
+      s->error = ENOMATCH;
+      break;
+    }
+    switch (socks.GetStatus(sock)) {
+    case CONNECTED:
+      s->bytes = MIN(s->data.GetSize(),
+		     (BIN_SIZE - socks.GetBin(sock)->GetSize()));
+      if (s->bytes > 0) {
+	socks.GetBin(sock)->AddBack(s->data.ExtractFront(s->bytes));
+	s->error = EOK;
+      }
+      else {
+	s->error = EBUF_SPACE;
+      }
+      s->data = Buffer();
+      break;
+    case READ_PENDING:     // This assumes that the App can read all the data
+                           //    we are sending!
+      if (app!=MINET_NOHANDLE) {
+	appmsg = new SockLibRequestResponse(mSTATUS, 
+					    s->connection,
+					    sock,
+					    s->data,
+					    s->bytes,
+					    s->error);
+	MinetSend(app,*appmsg);
+	delete appmsg;
+      }
+      socks.SetStatus(sock, CONNECTED);
+      s->error = EOK;
+      s->bytes = s->data.GetSize();
+      s->data = Buffer();
+      break;
+    default:
+      respond = 1;
+      s->type = STATUS;
+      s->error = EINVALID_OP;
+      break;
+    }
+    break;
+
+  case STATUS:
+    respond = 0;
+    elt = (RequestRecord *) icmpq.Remove();
+    request = elt->srr;
+    sock = elt->sock;
+    switch (request->type) {
+    case FORWARD:
+      if (app!=MINET_NOHANDLE) {
+	appmsg = new SockLibRequestResponse(mSTATUS, 
+					    s->connection,
+					    sock,
+					    s->data,
+					    s->bytes,
+					    s->error);
+	MinetSend(app,*appmsg);
+	delete appmsg;
+      }
+      if (s->error != EOK) {
+	socks.CloseSocket(sock);
+      }
+      else {
+	if ((socks.GetConnection(sock)->dest != IP_ADDRESS_ANY) &&
+	    (socks.GetConnection(sock)->destport != PORT_ANY)) {
+	  socks.SetStatus(sock, CONNECTED);
+	}
+	else {
+	  socks.SetStatus(sock, BOUND);
+	}
+      }
+      break;
+    case WRITE:
+      if (app!=MINET_NOHANDLE) {
+	appmsg = new SockLibRequestResponse(mSTATUS, 
+					    s->connection,
+					    sock,
+					    s->data,
+					    s->bytes,
+					    s->error);
+	MinetSend(app,*appmsg);
+	delete appmsg;
+      }
+      if ((socks.GetConnection(sock)->dest != IP_ADDRESS_ANY) &&
+	  (socks.GetConnection(sock)->destport != PORT_ANY)) {
+	socks.SetStatus(sock, CONNECTED);
+      }
+      else {
+	socks.SetStatus(sock, BOUND);
+      }
+      break;
+    }
+    delete elt;
+    break;
+
+  default:
+    respond = 1;
+    s->type = STATUS;
+    s->error = EINVALID_OP;
+    break;
+  }
+}
+
+
 
 int ResolveSrcPort (int sock, const Connection & c) {
   // If the source port in c is unbound, we try to find and reserve a port.
@@ -605,31 +846,39 @@ void ProcessAppRequest(SockLibRequestResponse & s, int & respond)
     break;
     
   case mWRITE:
+
+    cout << "trying to write!" << endl;
+
     sock = s.sockfd;
+
     if ((socks.GetStatus(sock) != CONNECTED) || 
 	(app != socks.GetFifoToApp(sock))) {
       s.bytes = 0;
       s.error = EINVALID_OP;
+cout << "1" << endl;
       break;
     }
     protocol = socks.GetConnection(sock)->protocol;
     if (protocol == IP_PROTO_UDP) {
       if (udp!=MINET_NOHANDLE) { 
+cout << "2" << endl;
 	respond = 0;
 	srr = new SockRequestResponse(WRITE,
 				      *socks.GetConnection(sock),
 				      s.data,
 				      s.bytes,
 				      s.error);
-	SendUDPRequest (srr, sock);    
+	SendUDPRequest (srr, sock);
 	socks.SetStatus(sock, WRITE_PENDING);
 	break;
       } else {
+cout << "3" << endl;
 	s.bytes = 0;
 	s.error = ENOT_IMPLEMENTED;
 	break;
       }
     } else {
+cout << "4" << endl;
       if (tcp!=MINET_NOHANDLE) { 
 	respond = 0;
 	srr = new SockRequestResponse(WRITE,
@@ -720,10 +969,10 @@ int main(int argc, char *argv[]) {
   
   MinetSendToMonitor(MinetMonitoringEvent("sock_module fully armed and operational"));
 		     
-		     
   MinetEvent event;
 
   while (MinetGetNextEvent(event)==0) {
+
     if (event.eventtype!=MinetEvent::Dataflow 
 	|| event.direction!=MinetEvent::IN) {
       MinetSendToMonitor(MinetMonitoringEvent("Unknown event ignored."));
@@ -745,8 +994,12 @@ int main(int argc, char *argv[]) {
 	  MinetSend(udp,*s);
       }
       if (event.handle==icmp) {
-	SockRequestResponse s;
-	MinetReceive(icmp,s);
+	int respond;
+	SockRequestResponse *s = new SockRequestResponse;
+	MinetReceive(icmp,*s);
+	ProcessICMPMessage(s, respond);
+	if (respond)
+	  MinetSend(icmp,*s);
 	MinetSendToMonitor(MinetMonitoringEvent("Ignoring request from icmp - unimplemented"));
       }
       if (event.handle==app) {

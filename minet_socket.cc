@@ -146,6 +146,7 @@ EXTERNC int minet_socket (int type) {
 				    Buffer(),
 				    0, 0);
       break;
+
     }
     MinetSend(sock,slrr);
     MinetReceive(sock,slrr);
