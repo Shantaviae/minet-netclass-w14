@@ -78,4 +78,4 @@ class TCPState {
 					  << ", last_recvd=" << last_recvd
 					  << ")"; return os;}
 };
-#endif _tcpstate
+#endif
