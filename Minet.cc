@@ -13,8 +13,11 @@
 #include <errno.h>
 
 
+#include <stdio.h>
+
 #include <iostream>
 #include <deque>
+
 
 #include "Minet.h"
 #include "error.h"
@@ -25,6 +28,26 @@
 
 #define FIFO_IMPL 1
 #define TCP_IMPL  0
+
+
+static void death(int sig)
+{
+  cerr <<endl<<"====> Module is dying due to "<<
+    (sig==SIGPIPE ? "SIGPIPE" :
+    sig==SIGABRT ? "SIGABRT" :
+    sig==SIGSEGV ? "SIGSEGV" :
+    sig==SIGBUS ? "SIGBUS" :
+    sig==SIGILL ? "SIGILL" :
+     sig==SIGFPE ? "SIGFPE" : "Unknown Signal")
+       <<" <====";
+  if (!getenv("MINET_DISPLAY") || (strcasecmp(getenv("MINET_DISPLAY"),"xterm")==0)) {
+    cerr <<endl<<"Hit enter to continue"<<endl;
+    char junk[80];
+    fgets(junk,80,stdin);
+    exit(-1);
+  }
+}
+
 
 ostream & operator<<(ostream &os, const MinetModule &mon)
 {
@@ -332,6 +355,15 @@ int         MinetInit(const MinetModule &mod)
   MyNextHandle=0;
   MyMonitorFifo=-1;
   
+
+  signal(SIGPIPE,death);
+  signal(SIGABRT,death);
+  signal(SIGSEGV,death);
+  signal(SIGBUS,death);
+  signal(SIGILL,death);
+  signal(SIGFPE,death);
+
+
 #if MONITOR
   const char *mf=MinetGetMonitorFifoName(mod);
 
@@ -341,7 +373,7 @@ int         MinetInit(const MinetModule &mod)
     }
   }
 #endif
-  
+
   MinetMonitoringEventDescription desc;
 
   desc.timestamp=Time();
@@ -1036,7 +1068,7 @@ int MinetGetNextEvent(MinetEvent &event, double timeout=-1)
 #define MINET_IMPL(TYPE, MINETTYPE) 					\
 int MinetMonitorSend(const MinetHandle &handle, const TYPE &obj)	\
 {									\
-  if (MyModuleType!=MINET_MONITOR) { 					\
+  if ((MyModuleType!=MINET_MONITOR) && (MyMonitorFifo>0)) {	        \
     Fifos::iterator fifo = MyFifos.FindMatching(handle);		\
     if (fifo==MyFifos.end()) {						\
       return -1;							\
@@ -1047,8 +1079,8 @@ int MinetMonitorSend(const MinetHandle &handle, const TYPE &obj)	\
       desc.from=MyModuleType;						\
       desc.to=(*fifo).module;						\
       desc.datatype = MINETTYPE;					\
-      desc.optype= MINET_SEND;                                          \
-      desc.Serialize(MyMonitorFifo);					\
+      desc.optype= MINET_SEND;           \
+      desc.Serialize(MyMonitorFifo); 					\
       obj.Serialize(MyMonitorFifo);					\
     }									\
     return 0;								\
@@ -1058,7 +1090,7 @@ int MinetMonitorSend(const MinetHandle &handle, const TYPE &obj)	\
 }									\
 int MinetMonitorReceive(const MinetHandle &handle, TYPE &obj)	\
 {									\
-  if (MyModuleType!=MINET_MONITOR) { 					\
+  if ((MyModuleType!=MINET_MONITOR) && (MyMonitorFifo>0)) {		\
     Fifos::iterator fifo = MyFifos.FindMatching(handle);		\
     if (fifo==MyFifos.end()) {						\
       return -1;							\
@@ -1069,7 +1101,7 @@ int MinetMonitorReceive(const MinetHandle &handle, TYPE &obj)	\
       desc.from=MyModuleType;						\
       desc.to=(*fifo).module;						\
       desc.datatype = MINETTYPE;					\
-      desc.optype= MINET_RECEIVE;                                          \
+      desc.optype= MINET_RECEIVE;                                       \
       desc.Serialize(MyMonitorFifo);					\
       obj.Serialize(MyMonitorFifo);					\
     }									\
@@ -1086,7 +1118,7 @@ int MinetSend(const MinetHandle &handle, const TYPE &object)	\
     Fifos::iterator fifo=MyFifos.FindMatching(handle);		\
     if (fifo==MyFifos.end()) { 					\
       return -1;						\
-    } else {							\
+    } else {  							\
       object.Serialize((*fifo).to);				\
     }								\
     return 0;							\

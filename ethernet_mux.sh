@@ -1,2 +1,2 @@
 #!/bin/sh
-./run_module.sh ethernet_mux
+run_module.sh ethernet_mux

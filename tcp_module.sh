@@ -1,2 +1,2 @@
 #!/bin/sh
-./run_module.sh tcp_module
+run_module.sh tcp_module

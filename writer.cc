@@ -10,6 +10,11 @@ extern "C" {
 #include "error.h"
 #include "ethernet.h"
 
+//
+// Set to 1 if libnet 1.1 is being used
+//
+#define LIBNET11 1
+
 /* 
    Accept incoming packets from stdin, write them to the wire and
    then signal back the parent that the write is done
@@ -17,8 +22,11 @@ extern "C" {
 
 char errbuf[LIBNET_ERRORBUF_SIZE];
 
+#if LIBNET11
+libnet_t *interface;
+#else
 struct libnet_link_int *interface;
-
+#endif
 
 void usage()
 {
@@ -46,7 +54,11 @@ int main(int argc, char *argv[])
   
   device=argv[1];
 
+#if LIBNET11
+  interface=libnet_init(LIBNET_LINK_ADV,device,errbuf);
+#else
   interface=libnet_open_link_interface(device,errbuf);
+#endif
 
   if (interface==NULL) { 
     fprintf(stderr,"Can't open interface - %s\n",errbuf);
@@ -101,10 +113,16 @@ int main(int argc, char *argv[])
  
     cerr << "writer: launch packet "<<nout<< " with header "<<eh<<" and length="<<p.size<<endl;
     
-    if (libnet_write_link_layer(interface,
-				(const char *)device,
-				(u_char *)(p.data),
-				p.size)<0) {
+#if LIBNET11
+  if (libnet_adv_write_link(interface,
+			    (u_char *)(p.data),
+			    p.size)<0) {
+#else
+  if (libnet_write_link_layer(interface,
+			      (const char *)device,
+			      (u_char *)(p.data),
+			      p.size)<0) {
+#endif
       cerr << "Can't write output packet "<<nout<<" to link\n";
       if (writeall(fileno(stdout),(char*)&fail,sizeof(fail),0,1)!=sizeof(fail)) { 
 	PERROR();
@@ -134,7 +152,16 @@ int main(int argc, char *argv[])
 	  RawEthernetPacket p = buffer.front();
 	  buffer.pop_front();
 	  cerr << p;
-	  if (libnet_write_link_layer(interface,(u_char *)device,(u_char*)(p.data),p.size)<0) {
+#if LIBNET11
+	  if (libnet_adv_write_link(interface,
+				    (u_char *)(p.data),
+				    p.size)<0) {
+#else
+          if (libnet_write_link_layer(interface,
+				      (const char *)device,
+				      (u_char *)(p.data),
+				      p.size)<0) {
+#endif
 	    fprintf(stderr,"Can't write output packet %d to link\n",nout);
 	    if (writeall(fileno(stdout),(char*)&fail,sizeof(fail),0,1)!=sizeof(fail)) { 
 	      PERROR();
@@ -165,7 +192,11 @@ int main(int argc, char *argv[])
 
   }
 
+#if LIBNET11
+  libnet_destroy(interface);
+#else
   libnet_close_link_interface(interface);
+#endif
 
 }
 

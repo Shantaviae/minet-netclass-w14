@@ -1,2 +1,2 @@
 #!/bin/sh
-./run_module.sh udp_module
+run_module.sh udp_module
