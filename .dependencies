@@ -42,7 +42,8 @@ sock_mod_structs.o: sock_mod_structs.cc sock_mod_structs.h sockint.h \
 constate.o: constate.cc constate.h sockint.h sock.h config.h buffer.h \
  util.h ip.h headertrailer.h packet.h raw_ethernet_packet.h udp.h \
  tcp.h
-route.o: route.cc route.h ip.h ethernet.h
+route.o: route.cc route.h ip.h headertrailer.h config.h buffer.h \
+ util.h packet.h raw_ethernet_packet.h ethernet.h
 minet_socket.o: minet_socket.cc Minet.h config.h buffer.h util.h \
  debug.h error.h raw_ethernet_packet.h packet.h headertrailer.h \
  raw_ethernet_packet_buffer.h ethernet.h arp.h ip.h icmp.h udp.h tcp.h \
@@ -68,8 +69,10 @@ ip_module_new_api.o: ip_module_new_api.cc Minet.h config.h buffer.h \
  util.h debug.h error.h raw_ethernet_packet.h packet.h headertrailer.h \
  raw_ethernet_packet_buffer.h ethernet.h arp.h ip.h icmp.h udp.h tcp.h \
  sock.h sockint.h sock_mod_structs.h constate.h Monitor.h
-ip_module.o: ip_module.cc config.h ip.h headertrailer.h buffer.h \
- util.h packet.h raw_ethernet_packet.h arp.h ethernet.h route.h
+ip_module.o: ip_module.cc route.h ip.h headertrailer.h config.h \
+ buffer.h util.h packet.h raw_ethernet_packet.h ethernet.h Minet.h \
+ debug.h error.h raw_ethernet_packet_buffer.h arp.h icmp.h udp.h tcp.h \
+ sock.h sockint.h sock_mod_structs.h constate.h Monitor.h
 other_module.o: other_module.cc Minet.h config.h buffer.h util.h \
  debug.h error.h raw_ethernet_packet.h packet.h headertrailer.h \
  raw_ethernet_packet_buffer.h ethernet.h arp.h ip.h icmp.h udp.h tcp.h \

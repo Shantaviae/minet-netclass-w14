@@ -257,7 +257,7 @@ void ARPRequestResponse::Serialize(const int fd) const
     throw SerializationException();
   }
   ethernetaddr.Serialize(fd);
-  if (writeall(fd,(const char*)flag,sizeof(flag))!=sizeof(flag)) {
+  if (writeall(fd,(const char*)&flag,sizeof(flag))!=sizeof(flag)) {
     throw SerializationException();
   }
 }
@@ -269,7 +269,7 @@ void ARPRequestResponse::Unserialize(const int fd)
     throw SerializationException();
   }
   ethernetaddr.Unserialize(fd);
-  if (readall(fd,(char*)flag,sizeof(flag))!=sizeof(flag)) {
+  if (readall(fd,(char*)&flag,sizeof(flag))!=sizeof(flag)) {
     throw SerializationException();
   }
 }

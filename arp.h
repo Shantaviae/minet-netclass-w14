@@ -73,10 +73,7 @@ class ARPPacket : public Packet {
 struct ARPRequestResponse {
   IPAddress    ipaddr;
   EthernetAddr ethernetaddr;
-  typedef int Flag;
-  Flag flag;
- 
-  enum junk {REQUEST=1, RESPONSE_OK=2, RESPONSE_UNKNOWN=4};
+  enum Flag {REQUEST=1, RESPONSE_OK=2, RESPONSE_UNKNOWN=4} flag;
 
   ARPRequestResponse();
   ARPRequestResponse(const ARPRequestResponse &rhs);
