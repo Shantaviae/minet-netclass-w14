@@ -1016,7 +1016,7 @@ int MinetMonitorSend(const MinetHandle &handle, const TYPE &obj)	\
     return 0;								\
   }									\
 }									\
-int MinetMonitorReceive(const MinetHandle &handle, const TYPE &obj)	\
+int MinetMonitorReceive(const MinetHandle &handle, TYPE &obj)	\
 {									\
   if (MyModuleType!=MINET_MONITOR) { 					\
     Fifos::iterator fifo = MyFifos.FindMatching(handle);		\
@@ -1024,14 +1024,8 @@ int MinetMonitorReceive(const MinetHandle &handle, const TYPE &obj)	\
       return -1;							\
     } else {								\
       MinetMonitoringEventDescription desc;				\
-      desc.timestamp=(double)Time();					\
-      desc.source=MyModuleType;                                         \
-      desc.from=(*fifo).module;						\
-      desc.to=MyModuleType;						\
-      desc.datatype = MINETTYPE;					\
-      desc.optype= MINET_RECEIVE;                                       \
-      desc.Serialize(MyMonitorFifo);					\
-      obj.Serialize(MyMonitorFifo);					\
+      desc.Unserialize(MyMonitorFifo);					\
+      obj.Unserialize(MyMonitorFifo);					\
     }									\
     return 0;								\
   } else {								\

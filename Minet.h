@@ -127,7 +127,7 @@ int         MinetGetNextEvent(MinetEvent &event, double timeout=-1);
 int MinetSend(const MinetHandle &handle, const TYPE &object);	        \
 int MinetReceive(const MinetHandle &handle, TYPE &object);        \
 int MinetMonitorSend(const MinetHandle &handle, const TYPE &object);	\
-int MinetMonitorReceive(const MinetHandle &handle, const TYPE &object); \
+int MinetMonitorReceive(const MinetHandle &handle, TYPE &object); \
 
 
 
