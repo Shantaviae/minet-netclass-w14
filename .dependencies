@@ -1,5 +1,11 @@
-Minet.o: Minet.cc Minet.h error.h config.h util.h
-Monitor.o: Monitor.cc Minet.h Monitor.h util.h
+Minet.o: Minet.cc Minet.h config.h Monitor.h buffer.h util.h debug.h \
+ error.h raw_ethernet_packet.h packet.h headertrailer.h ethernet.h \
+ arp.h ip.h icmp.h udp.h tcp.h sock.h sockint.h sock_mod_structs.h \
+ constate.h
+Monitor.o: Monitor.cc Minet.h config.h Monitor.h buffer.h util.h \
+ debug.h error.h raw_ethernet_packet.h packet.h headertrailer.h \
+ ethernet.h arp.h ip.h icmp.h udp.h tcp.h sock.h sockint.h \
+ sock_mod_structs.h constate.h
 config.o: config.cc config.h
 buffer.o: buffer.cc buffer.h config.h util.h
 error.o: error.cc error.h
@@ -39,6 +45,10 @@ constate.o: constate.cc constate.h sockint.h sock.h config.h buffer.h \
 minet_socket.o: minet_socket.cc minet_socket.h config.h sockint.h \
  sock.h buffer.h util.h ip.h headertrailer.h packet.h \
  raw_ethernet_packet.h udp.h tcp.h
+monitor.o: monitor.cc Minet.h config.h Monitor.h buffer.h util.h \
+ debug.h error.h raw_ethernet_packet.h packet.h headertrailer.h \
+ ethernet.h arp.h ip.h icmp.h udp.h tcp.h sock.h sockint.h \
+ sock_mod_structs.h constate.h
 device_driver.o: device_driver.cc config.h error.h ethernet.h \
  raw_ethernet_packet.h packet.h buffer.h util.h headertrailer.h \
  raw_ethernet_packet_buffer.h debug.h

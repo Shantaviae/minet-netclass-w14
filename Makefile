@@ -28,6 +28,7 @@ LIBMINET_OBJS  = \
            constate.o
 
 EXECOBJS_EXCEPT_READER_WRITER =                 \
+           monitor.o                            \
            device_driver.o                      \
            ethernet_mux.o			\
            arp_module.o                         \

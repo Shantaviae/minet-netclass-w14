@@ -96,6 +96,7 @@ const char ipmux2mon_fifo_name[]="./fifos/ipmux2mon";
 const char udp2mon_fifo_name[]="./fifos/udp2mon";
 const char tcp2mon_fifo_name[]="./fifos/tcp2mon";
 const char icmp2mon_fifo_name[]="./fifos/icmp2mon";
+const char ipother2mon_fifo_name[]="./fifos/ipother2mon";
 const char sock2mon_fifo_name[]="./fifos/sock2mon";
 const char socklib2mon_fifo_name[]="./fifos/socklib2mon";
 const char app2mon_fifo_name[]="./fifos/app2mon";

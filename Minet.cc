@@ -1,5 +1,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <unistd.h>
 
 #include <sys/socket.h>
@@ -19,7 +21,7 @@
 #include "config.h"
 #include "util.h"
 
-#define MONITOR   0
+#define MONITOR   1
 
 #define FIFO_IMPL 1
 #define TCP_IMPL  0
@@ -102,6 +104,9 @@ ostream & operator<<(ostream &os, const MinetDatatype &t)
     break;
   case MINET_PACKET:
     os << "MINET_PACKET";
+    break;
+  case MINET_ARPREQUESTRESPONSE:
+    os << "MINET_ARPREQUESTRESPONSE";
     break;
   case MINET_SOCKREQUESTRESPONSE:
     os << "MINET_SOCKREQUESTRESPONSE";
@@ -206,15 +211,16 @@ ostream & MinetEvent::Print(ostream &os) const
 #if FIFO_IMPL
 
 struct FifoData {
-  MinetHandle h;
+  MinetHandle handle;
+  MinetModule module;
   int         from, to;
 };
 
 class Fifos : public deque<FifoData> {
 public:
-  iterator FindMatching(MinetHandle handle) {
+  iterator FindMatching(const MinetHandle handle) {
     for (iterator x=begin(); x!=end(); ++x) {
-      if ((*x).h==handle) {
+      if ((*x).handle==handle) {
 	return x;
       }
     }
@@ -242,7 +248,7 @@ int         MinetInit(const MinetModule &mod)
   MyMonitorFifo=-1;
   
 #if MONITOR
-  char *mf=0;
+  const char *mf=0;
   switch (MyModuleType) {
   case MINET_MONITOR:
     break;
@@ -253,7 +259,7 @@ int         MinetInit(const MinetModule &mod)
     mf=writer2mon_fifo_name;
     break;
   case MINET_DEVICE_DRIVER:
-    mf=ethernet2mon_fifo_name;
+    mf=ether2mon_fifo_name;
     break;
   case MINET_ETHERNET_MUX:
     mf=ethermux2mon_fifo_name;
@@ -298,7 +304,7 @@ int         MinetInit(const MinetModule &mod)
   }
   
   if (mf!=0) { 
-    if ((MyMonitorFifo=open(mf,WR_ONLY))<0) { 
+    if ((MyMonitorFifo=open(mf,O_WRONLY))<0) { 
       cerr << "Can't connect to monitor\n";
     }
   }
@@ -315,244 +321,170 @@ int         MinetDeinit()
   if (MyMonitorFifo>0) { 
     close(MyMonitorFifo);
     MyMonitorFifo=-1;
-}
+  }
   return 0;
 }
 
-MinetHandle MinetConnect(const MinetModule &mod, 
-                         const MinetModule &connectas=MINET_DEFAULT)
+MinetHandle MinetConnect(const MinetModule &mod)
 {
   const char *fifoto;
   const char *fifofrom;
-  bool above;
-  MinetModule realconnectas= (connectas==MINET_DEFAULT) ? MyModuleType : connectas;
-    
 
-  switch (realconnectas) {
+  switch (MyModuleType) {
   case MINET_MONITOR:
     switch (mod) {
-      // expand this later
+      // Monitors only do accepts
     default:
-      Die("Invalid Connection.");
+      Die("Invalid Connect.");
       break;
     }
     break;
   case MINET_READER:
-    Die("Invalid Connection");
+    // Readers still use their internal protocol
+    Die("Invalid Connect");
     break;
   case MINET_WRITER:
-    Die("Invalid Connection");
+    // Writers still use their internal protocol
+    Die("Invalid Connect");
     break;
   case MINET_DEVICE_DRIVER:
-    switch (mod) {
-    case MINET_ETHERNET_MUX:
-      fifoto=ether2mux_fifo_name;
-      fifofrom=mux2ether_fifo_name;
-      above=true;
-      break;
-    default:
-      Die("Invalid Connection.");
-      break;
-    }
+    // Device drivers do no do active connects
+    Die("Invalid Connect.");
     break;
   case MINET_ETHERNET_MUX:
+    // active connect to dd, passive connects to several others.
     switch (mod) {
     case MINET_DEVICE_DRIVER:
       fifoto=mux2ether_fifo_name;
       fifofrom=ether2mux_fifo_name;
-      above=false;
-      break;
-    case MINET_IP_MODULE:
-      fifoto=mux2ip_fifo_name;
-      fifofrom=ip2mux_fifo_name;
-      above=true;
-      break;
-    case MINET_ARP_MODULE:
-      fifoto=mux2arp_fifo_name;
-      fifofrom=arp2mux_fifo_name;
-      above=true;
-      break;
-    case MINET_OTHER_MODULE:
-      fifoto=mux2other_fifo_name;
-      fifofrom=other2mux_fifo_name;
-      above=true;
       break;
     default:
-      Die("Invalid Connection.");
+      Die("Invalid Connect.");
       break;
     }
     break;
   case MINET_IP_MODULE:
+    // active to ethermux and arp module, passive to ip mux
     switch (mod) { 
     case MINET_ETHERNET_MUX:
       fifoto=ip2mux_fifo_name;
       fifofrom=mux2ip_fifo_name;
-      above=false;
       break;
-    case MINET_IP_MUX:
-      fifoto=ip2ipmux_fifo_name;
-      fifofrom=ipmux2ip_fifo_name;
-      above=true;
+    case MINET_ARP_MODULE:
+      fifoto=ip2arp_fifo_name;
+      fifofrom=arp2ip_fifo_name;
       break;
     default:
-      Die("Invalid Connection.");
+      Die("Invalid Connect.");
       break;
     }
     break;
   case MINET_ARP_MODULE:
+    // active to ethermux, passive to ip
     switch (mod) {
     case MINET_ETHERNET_MUX:
       fifoto=arp2mux_fifo_name;
       fifofrom=mux2arp_fifo_name;
-      above=false;
-      break;
-    case MINET_IP_MODULE:
-      fifoto=arp2ip_fifo_name;
-      fifoto=ip2arp_fifo_name;
-      above=true;
       break;
     default:
-      Die("Invalid Connection.");
+      Die("Invalid Connect.");
       break;
     }
     break;
   case MINET_OTHER_MODULE:
+    // active to ethermux
     switch (mod) {
     case MINET_ETHERNET_MUX:
       fifoto=other2mux_fifo_name;
       fifofrom=mux2other_fifo_name;
-      above=false;
       break;
     default:
-      Die("Invalid Connection.");
+      Die("Invalid Connect.");
       break;
     }
     break;
   case MINET_IP_MUX:
+    // active to ip module, passive others
     switch (mod) {
     case MINET_IP_MODULE:
       fifoto=ipmux2ip_fifo_name;
       fifofrom=ip2ipmux_fifo_name;
-      above=false;
-      break;
-    case MINET_ICMP_MODULE:
-      fifoto=ipmux2icmp_fifo_name;
-      fifofrom=icmp2ipmux_fifo_name;
-      above=true;
-      break;
-    case MINET_UDP_MODULE:
-      fifoto=ipmux2udp_fifo_name;
-      fifofrom=udp2ipmux_fifo_name;
-      above=true;
-      break;
-    case MINET_TCP_MODULE:
-      fifoto=ipmux2tcp_fifo_name;
-      fifofrom=tcp2ipmux_fifo_name;
-      above=true;
-      break;
-    case MINET_IP_OTHER_MODULE:
-      fifoto=ipmux2other_fifo_name;
-      fifofrom=other2ipmux_fifo_name;
-      above=true;
       break;
     default:
-      Die("Invalid Connection.");
+      Die("Invalid Connect.");
       break;
     }
     break;
   case MINET_ICMP_MODULE:
+    // active to ip mux, passive to sock
     switch (mod) { 
     case MINET_IP_MUX:
       fifoto=icmp2ipmux_fifo_name;
       fifofrom=ipmux2icmp_fifo_name;
-      above=false;
-      break;
-    case MINET_SOCK_MODULE:
-      fifoto=icmp2sock_fifo_name;
-      fifofrom=sock2icmp_fifo_name;
-      above=true;
       break;
     default:
-      Die("Invalid Connection.");
+      Die("Invalid Connect.");
       break;
     }
     break;
   case MINET_UDP_MODULE:
+    // active to ip mux, passive to sock
     switch (mod) { 
     case MINET_IP_MUX:
       fifoto=udp2ipmux_fifo_name;
       fifofrom=ipmux2udp_fifo_name;
-      above=false;
-      break;
-    case MINET_SOCK_MODULE:
-      fifoto=udp2sock_fifo_name;
-      fifofrom=sock2udp_fifo_name;
-      above=true;
       break;
     default:
-      Die("Invalid Connection.");
+      Die("Invalid Connect.");
       break;
     }
     break;
   case MINET_TCP_MODULE:
+    // active to ipmux, passive to sock
     switch (mod) { 
     case MINET_IP_MUX:
       fifoto=tcp2ipmux_fifo_name;
       fifofrom=ipmux2tcp_fifo_name;
-      above=false;
-      break;
-    case MINET_SOCK_MODULE:
-      fifoto=tcp2sock_fifo_name;
-      fifofrom=sock2tcp_fifo_name;
-      above=true;
       break;
     default:
-      Die("Invalid Connection.");
+      Die("Invalid Connect.");
       break;
     }
     break;
   case MINET_IP_OTHER_MODULE:
+    // active to ip mux, passive to sock
     switch (mod) { 
     case MINET_IP_MUX:
       fifoto=other2ipmux_fifo_name;
       fifofrom=ipmux2other_fifo_name;
-      above=false;
-      break;
-    case MINET_SOCK_MODULE:
-      fifoto=other2sock_fifo_name;
-      fifofrom=sock2other_fifo_name;
-      above=true;
       break;
     default:
-      Die("Invalid Connection.");
+      Die("Invalid Connect.");
       break;
     }
     break;
   case MINET_SOCK_MODULE:
+    // active to icmp, udp, tcp, ipother, and other, passive to socklib module
     switch (mod) {
     case MINET_IP_MUX:
-      Die("Connection type unimplemented.");
+    case MINET_IP_OTHER_MODULE:
+    case MINET_OTHER_MODULE:
+      Die("Connect type unimplemented.");
       break;
     case MINET_ICMP_MODULE:
       fifoto=sock2icmp_fifo_name;
       fifofrom=icmp2sock_fifo_name;
-      above=false;
       break;
     case MINET_UDP_MODULE:
       fifoto=sock2udp_fifo_name;
       fifofrom=udp2sock_fifo_name;
-      above=false;
       break;
     case MINET_TCP_MODULE:
       fifoto=sock2tcp_fifo_name;
       fifofrom=tcp2sock_fifo_name;
-      above=false;
-      break;
-    case MINET_IP_OTHER_MODULE:
-      Die("Connection type unimplemented.");
       break;
     default:
-      Die("Invalid Connection.");
+      Die("Invalid Connect.");
       break;
     }
     break;
@@ -564,7 +496,7 @@ MinetHandle MinetConnect(const MinetModule &mod,
       fifofrom=sock2socklib_fifo_name;
       break;
     default:
-      Die("Invalid Connection.");
+      Die("Invalid Connect.");
       break;
     }
     break;
@@ -574,27 +506,18 @@ MinetHandle MinetConnect(const MinetModule &mod,
   }
 
   FifoData con;
-  con.h=MinetGetNextHandle();
+  con.handle=MinetGetNextHandle();
+  con.module=mod;
 
-  if (!above) {
-    con.from=open(fifofrom,O_RDONLY);
-    con.to=open(fifoto,O_WRONLY);
-  } else {
-    con.to=open(fifoto,O_WRONLY);
-    con.from=open(fifofrom,O_RDONLY);
-  }
+  con.to=open(fifoto,O_WRONLY);
+  con.from=open(fifofrom,O_RDONLY);
 
   MyFifos.push_back(con);
-  return con.h;
+
+  return con.handle;
 }
 
-//
-// For fifos, accepts are basically just error checked and then
-//
-// ignored.
-
-MinetHandle MinetAccept(const MinetModule &mod, 
-                        bool  await=false)
+MinetHandle MinetAccept(const MinetModule &mod)
 {
   const char *fifofrom, *fifoto;
   bool above;
@@ -604,213 +527,154 @@ MinetHandle MinetAccept(const MinetModule &mod,
     switch (mod) {
       // expand this later
     default:
-      Die("Invalid Connection.");
+      Die("Invalid Accept.");
       break;
     }
     break;
   case MINET_READER:
-    Die("Invalid Connection");
+    Die("Invalid Accept");
     break;
   case MINET_WRITER:
-    Die("Invalid Connection");
+    Die("Invalid Accept");
     break;
   case MINET_DEVICE_DRIVER:
     switch (mod) {
     case MINET_ETHERNET_MUX:
+      fifoto=ether2mux_fifo_name;
+      fifofrom=mux2ether_fifo_name;
       break;
     default:
-      Die("Invalid Connection.");
+      Die("Invalid Accept.");
       break;
     }
     break;
   case MINET_ETHERNET_MUX:
     switch (mod) {
-    case MINET_DEVICE_DRIVER:
     case MINET_IP_MODULE:
+      fifoto=mux2ip_fifo_name;
+      fifofrom=ip2mux_fifo_name;
+      break;
     case MINET_ARP_MODULE:
+      fifoto=mux2arp_fifo_name;
+      fifofrom=arp2mux_fifo_name;
+      break;
     case MINET_OTHER_MODULE:
+      fifoto=mux2other_fifo_name;
+      fifofrom=other2mux_fifo_name;
+      break;
     default:
-      Die("Invalid Connection.");
+      Die("Invalid Accept.");
       break;
     }
     break;
   case MINET_IP_MODULE:
     switch (mod) { 
-    case MINET_ETHERNET_MUX:
     case MINET_IP_MUX:
+      fifoto=ip2ipmux_fifo_name;
+      fifofrom=ipmux2ip_fifo_name;
+      break;
     default:
-      Die("Invalid Connection.");
+      Die("Invalid Accept.");
       break;
     }
     break;
   case MINET_ARP_MODULE:
     switch (mod) {
-    case MINET_ETHERNET_MUX:
-      fifoto=arp2mux_fifo_name;
-      fifofrom=mux2arp_fifo_name;
-      above=false;
-      break;
     case MINET_IP_MODULE:
       fifoto=arp2ip_fifo_name;
       fifoto=ip2arp_fifo_name;
-      above=true;
       break;
     default:
-      Die("Invalid Connection.");
+      Die("Invalid Accept.");
       break;
     }
     break;
   case MINET_OTHER_MODULE:
-    switch (mod) {
-    case MINET_ETHERNET_MUX:
-      fifoto=other2mux_fifo_name;
-      fifofrom=mux2other_fifo_name;
-      above=false;
-      break;
-    default:
-      Die("Invalid Connection.");
-      break;
-    }
+    // no passives
+    Die("Invalid Accept.");
     break;
   case MINET_IP_MUX:
     switch (mod) {
-    case MINET_IP_MODULE:
-      fifoto=ipmux2ip_fifo_name;
-      fifofrom=ip2ipmux_fifo_name;
-      above=false;
-      break;
     case MINET_ICMP_MODULE:
       fifoto=ipmux2icmp_fifo_name;
       fifofrom=icmp2ipmux_fifo_name;
-      above=true;
       break;
     case MINET_UDP_MODULE:
       fifoto=ipmux2udp_fifo_name;
       fifofrom=udp2ipmux_fifo_name;
-      above=true;
       break;
     case MINET_TCP_MODULE:
       fifoto=ipmux2tcp_fifo_name;
       fifofrom=tcp2ipmux_fifo_name;
-      above=true;
       break;
     case MINET_IP_OTHER_MODULE:
       fifoto=ipmux2other_fifo_name;
       fifofrom=other2ipmux_fifo_name;
-      above=true;
       break;
     default:
-      Die("Invalid Connection.");
+      Die("Invalid Accept.");
       break;
     }
     break;
   case MINET_ICMP_MODULE:
     switch (mod) { 
-    case MINET_IP_MUX:
-      fifoto=icmp2ipmux_fifo_name;
-      fifofrom=ipmux2icmp_fifo_name;
-      above=false;
-      break;
     case MINET_SOCK_MODULE:
       fifoto=icmp2sock_fifo_name;
       fifofrom=sock2icmp_fifo_name;
-      above=true;
       break;
     default:
-      Die("Invalid Connection.");
+      Die("Invalid Accept.");
       break;
     }
     break;
   case MINET_UDP_MODULE:
     switch (mod) { 
-    case MINET_IP_MUX:
-      fifoto=udp2ipmux_fifo_name;
-      fifofrom=ipmux2udp_fifo_name;
-      above=false;
-      break;
     case MINET_SOCK_MODULE:
       fifoto=udp2sock_fifo_name;
       fifofrom=sock2udp_fifo_name;
-      above=true;
       break;
     default:
-      Die("Invalid Connection.");
+      Die("Invalid Accept.");
       break;
     }
     break;
   case MINET_TCP_MODULE:
     switch (mod) { 
-    case MINET_IP_MUX:
-      fifoto=tcp2ipmux_fifo_name;
-      fifofrom=ipmux2tcp_fifo_name;
-      above=false;
-      break;
     case MINET_SOCK_MODULE:
       fifoto=tcp2sock_fifo_name;
       fifofrom=sock2tcp_fifo_name;
-      above=true;
       break;
     default:
-      Die("Invalid Connection.");
+      Die("Invalid Accept.");
       break;
     }
     break;
   case MINET_IP_OTHER_MODULE:
     switch (mod) { 
-    case MINET_IP_MUX:
-      fifoto=other2ipmux_fifo_name;
-      fifofrom=ipmux2other_fifo_name;
-      above=false;
-      break;
     case MINET_SOCK_MODULE:
       fifoto=other2sock_fifo_name;
       fifofrom=sock2other_fifo_name;
-      above=true;
       break;
     default:
-      Die("Invalid Connection.");
+      Die("Invalid Accept.");
       break;
     }
     break;
   case MINET_SOCK_MODULE:
     switch (mod) {
-    case MINET_IP_MUX:
-      Die("Connection type unimplemented.");
-      break;
-    case MINET_ICMP_MODULE:
-      fifoto=sock2icmp_fifo_name;
-      fifofrom=icmp2sock_fifo_name;
-      above=false;
-      break;
-    case MINET_UDP_MODULE:
-      fifoto=sock2udp_fifo_name;
-      fifofrom=udp2sock_fifo_name;
-      above=false;
-      break;
-    case MINET_TCP_MODULE:
-      fifoto=sock2tcp_fifo_name;
-      fifofrom=tcp2sock_fifo_name;
-      above=false;
-      break;
-    case MINET_IP_OTHER_MODULE:
-      Die("Connection type unimplemented.");
+    case MINET_SOCKLIB_MODULE:
+      fifoto=sock2socklib_fifo_name;
+      fifofrom=socklib2sock_fifo_name;
       break;
     default:
-      Die("Invalid Connection.");
+      Die("Invalid Accept.");
       break;
     }
     break;
   case MINET_SOCKLIB_MODULE:
   case MINET_APP:
-    switch (mod) { 
-    case MINET_SOCK_MODULE:
-      fifoto=socklib2sock_fifo_name;
-      fifofrom=sock2socklib_fifo_name;
-      break;
-    default:
-      Die("Invalid Connection.");
-      break;
-    }
+    // no passives
+    Die("Invalid Accept.");
     break;
   case MINET_DEFAULT:
   default:
@@ -818,18 +682,14 @@ MinetHandle MinetAccept(const MinetModule &mod,
   }
 
   FifoData con;
-  con.h=MinetGetNextHandle();
+  con.handle=MinetGetNextHandle();
+  con.module=mod;
 
-  if (!above) {
-    con.from=open(fifofrom,O_RDONLY);
-    con.to=open(fifoto,O_WRONLY);
-  } else {
-    con.to=open(fifoto,O_WRONLY);
-    con.from=open(fifofrom,O_RDONLY);
-  }
+  con.from=open(fifofrom,O_RDONLY);
+  con.to=open(fifoto,O_WRONLY);
 
   MyFifos.push_back(con);
-  return con.h;
+  return con.handle;
 }
 
 
@@ -847,32 +707,152 @@ int         MinetClose(const MinetHandle &mh)
 					  
   
 
-MinetEvent &MinetGetNextEvent(double timeout=-1);
+int MinetGetNextEvent(MinetEvent &event, double timeout=-1)
+{
+  int maxfd;
+  fd_set read_fds;
+  int rc;
+  
+  Time now;
+  Time doneby((double)now+timeout);
+
+  
+
+  while (1) { 
+    FD_ZERO(&read_fds);
+    maxfd=-1;
+    for (Fifos::iterator i=MyFifos.begin(); i!=MyFifos.end(); ++i) {
+      FD_SET((*i).from, &read_fds);
+      maxfd=MAX(maxfd,(*i).from);
+    }
+    if (timeout==-1 && maxfd==-1) { 
+      return -1;
+    }
+
+    if (timeout!=-1) {
+      rc = select(maxfd+1, &read_fds,0,0,&doneby);
+    } else {
+      rc = select(maxfd+1, &read_fds,0,0,0);
+    }
+    if (rc<0) { 
+      if (errno==EINTR) {
+	continue;
+      } else {
+	return -1;
+      }
+    } else if (rc==0) {
+      event.eventtype=MinetEvent::Timeout;
+      event.direction=MinetEvent::NONE;
+      event.handle=MINET_NOHANDLE;
+      event.error=0;
+      Time now;
+      event.overtime=(double)now - (double) doneby;
+      return 0;
+    } else {
+      for (Fifos::iterator i=MyFifos.begin(); i!=MyFifos.end(); ++i) {
+	if (FD_ISSET((*i).from, &read_fds)) {
+	  event.eventtype=MinetEvent::Dataflow;
+	  event.direction=MinetEvent::IN;
+	  event.handle=(*i).handle;
+	  event.error=0;
+	  event.overtime=0.0;
+	  return 0;
+	}
+      }
+    }
+  }
+}
 
 
-template <class T> 
-int MinetSend(const MinetHandle &handle, const T &object);  
-template <class T> 
-int MinetReceive(const MinetHandle &handle, T &object);
+#define MINET_IMPL(TYPE, MINETTYPE) 					\
+int MinetMonitorSend(const MinetHandle &handle, const TYPE &obj)	\
+{									\
+  if (MyModuleType!=MINET_MONITOR) { 					\
+    Fifos::iterator fifo = MyFifos.FindMatching(handle);		\
+    if (fifo==MyFifos.end()) {						\
+      return -1;							\
+    } else {								\
+      MinetMonitoringEventDescription desc;				\
+      desc.timestamp=(double)Time();					\
+      desc.from=MyModuleType;						\
+      desc.to=(*fifo).module;						\
+      desc.datatype = MINETTYPE;					\
+      desc.Serialize(MyMonitorFifo);					\
+      obj.Serialize(MyMonitorFifo);					\
+    }									\
+    return 0;								\
+  } else {								\
+    return 0;								\
+  }									\
+}									\
+int MinetMonitorReceive(const MinetHandle &handle, const TYPE &obj)	\
+{									\
+  if (MyModuleType!=MINET_MONITOR) { 					\
+    Fifos::iterator fifo = MyFifos.FindMatching(handle);		\
+    if (fifo==MyFifos.end()) {						\
+      return -1;							\
+    } else {								\
+      MinetMonitoringEventDescription desc;				\
+      desc.timestamp=(double)Time();					\
+      desc.from=(*fifo).module;						\
+      desc.to=MyModuleType;						\
+      desc.datatype = MINETTYPE;					\
+      desc.Serialize(MyMonitorFifo);					\
+      obj.Serialize(MyMonitorFifo);					\
+    }									\
+    return 0;								\
+  } else {								\
+    return 0;								\
+  }								\
+}								\
+int MinetSend(const MinetHandle &handle, const TYPE &object)	\
+{								\
+  if (MinetMonitorSend(handle,object)) { 			\
+    return -1;							\
+  } else {							\
+    Fifos::iterator fifo=MyFifos.FindMatching(handle);		\
+    if (fifo==MyFifos.end()) { 					\
+      return -1;						\
+    } else {							\
+      object.Serialize((*fifo).to);				\
+    }								\
+    return 0;							\
+  }								\
+};								\
+int MinetReceive(const MinetHandle &handle, TYPE &object)	\
+{								\
+  Fifos::iterator fifo=MyFifos.FindMatching(handle);		\
+  if (fifo==MyFifos.end()) { 					\
+    return -1;							\
+  } else {							\
+    object.Serialize((*fifo).to);				\
+    if (MinetMonitorReceive(handle,object)) {			\
+      return -1;						\
+    } else {							\
+      return 0;							\
+    }								\
+  }								\
+};
 
 
+MINET_IMPL(MinetEvent,MINET_EVENT)
+MINET_IMPL(MinetMonitoringEvent,MINET__IMPLINGEVENT)
+MINET_IMPL(RawEthernetPacket, MINET_RAWETHERNETPACKET)
+MINET_IMPL(Packet, MINET_PACKET)
+MINET_IMPL(ARPRequestResponse, MINET_ARPREQUESTRESPONSE)
+MINET_IMPL(SockRequestResponse, MINET_SOCKREQUESTRESPONSE)
+MINET_IMPL(SockLibRequestResponse, MINET_SOCKLIBREQUESTRESPONSE)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+int MinetSendToMonitor(const MinetMonitoringEvent &obj)
+{
+  MinetMonitoringEventDescription desc;
+  desc.timestamp=Time();
+  desc.from=MyModuleType;
+  desc.to=MINET_MONITOR;
+  desc.datatype=MINET_MONITORINGEVENT;
+  desc.Serialize(MyMonitorFifo);
+  obj.Serialize(MyMonitorFifo);
+  return 0;
+}
 #endif

@@ -19,10 +19,12 @@ struct Time : public timeval
   Time(const timeval &rhs);
   Time(const double time);
   Time(const unsigned sec, const unsigned usec);
-  Time();
+  Time(); // gets the current time
 
   Time & operator=(const Time &rhs);
   Time & operator=(const double &rhs);
+
+  void SetToCurrentTime();
 
   operator double() const;
 

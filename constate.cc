@@ -20,7 +20,12 @@ Time::Time(const unsigned sec, const unsigned usec)
     
 Time::Time()
 {
-  tv_sec=0; tv_usec=0;
+  SetToCurrentTime();
+}
+
+void Time::SetToCurrentTime()
+{
+  gettimeofday((struct timeval *)this,0);
 }
 
 Time & Time::operator=(const Time &rhs)
