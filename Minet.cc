@@ -926,8 +926,7 @@ int MinetGetNextEvent(MinetEvent &event, double timeout=-1)
   fd_set read_fds;
   int rc;
   
-  Time now;
-  Time doneby((double)now+timeout);
+  Time doneby(timeout);
 
   
 
