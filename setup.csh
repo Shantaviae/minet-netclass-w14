@@ -79,7 +79,7 @@ setenv MINET_DEBUGLEVEL "0"
 # log xterm gdb
 setenv MINET_DISPLAY xterm
 # setenv MINET_SHIMS  "ip_mux+udp_module;udp_module+sock_module;ip_mux+tcp_module;tcp_module+sock_module"
-
+setenv MINET_MONITOR icmp
 setenv MINET_MSS 256
 setenv MINET_MTU 500
 

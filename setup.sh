@@ -79,6 +79,7 @@ export MINET_DEBUGLEVEL="0"
 # log xterm gdb
 export MINET_DISPLAY=xterm
 #export MINET_SHIMS="ip_mux+udp_module;udp_module+sock_module;ip_mux+tcp_module;tcp_module+sock_module"
+export MINET_MONITOR=icmp
 export MINET_MSS=256
 export MINET_MTU=500
 
