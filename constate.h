@@ -41,17 +41,20 @@ struct ConnectionToStateMapping {
   Connection connection;
   Time       timeout;
   STATE      state;
+  bool       bTmrActive;
   
   ConnectionToStateMapping(const ConnectionToStateMapping<STATE> &rhs) : 
-    connection(rhs.connection), timeout(rhs.timeout), state(rhs.state) {}
+    connection(rhs.connection), timeout(rhs.timeout), state(rhs.state), bTmrActive(rhs.bTmrActive) {}
   ConnectionToStateMapping(const Connection &c, 
 			   const Time &t,
-			   const STATE &s) :
-    connection(c), timeout(t), state(s) {}
-  ConnectionToStateMapping() : connection(), timeout(), state() {}
+			   const STATE &s,
+			   const bool &b) :
+    connection(c), timeout(t), state(s), bTmrActive(b) {}
+  ConnectionToStateMapping() : connection(), timeout(), state(), bTmrActive() {}
 
   ConnectionToStateMapping<STATE> & operator=(const ConnectionToStateMapping<STATE> &rhs) {
-    connection=rhs.connection; timeout=rhs.timeout; state=rhs.state; return *this;
+    connection=rhs.connection; timeout=rhs.timeout; state=rhs.state;
+    bTmrActive=rhs.bTmrActive; return *this;
   }
   bool MatchesSource(const Connection &rhs) const {
     return connection.MatchesSource(rhs);
@@ -66,7 +69,8 @@ struct ConnectionToStateMapping {
     return connection.Matches(rhs);
   }
   ostream & Print(ostream &os) const {
-    os << "ConnectionToStateMapping(connection="<<connection<<", timeout="<<timeout<<", state="<<state<<")";
+    os << "ConnectionToStateMapping(connection="<<connection
+       <<", timeout="<<timeout<<", state="<<state<<", bTmrActive="<<bTmrActive<<")";
     return os;
   }
 };
@@ -79,17 +83,32 @@ class ConnectionList : public deque<ConnectionToStateMapping<STATE> >
   ConnectionList() {}
 
   ConnectionList<STATE>::iterator FindEarliest() {
-    ConnectionList<STATE>::iterator ptr=begin();
-    Time min=(*ptr).timeout;
-    for (ConnectionList<STATE>::iterator i=ptr; i!=end(); ++i) {
-      if ((*i).timeout < min) {
+    ConnectionList<STATE>::iterator ptr=end();
+    ConnectionList<STATE>::iterator i=begin();
+
+    // No connections in list
+    if(empty())
+	return end();
+
+    // 1 connection in list
+    if(size() == 1) {
+	if((*i).bTmrActive == true)
+	    return begin();
+	else {
+	    return end();
+	}
+    }
+
+    // More than one connection in list
+    Time min=(*i).timeout;
+    for (; i!=end(); ++i) {
+      if ((*i).bTmrActive == true && (*i).timeout < min) {
 	min=(*i).timeout;
 	ptr=i;
       }
     }
     return ptr;
   }
-  
 
   ConnectionList<STATE>::iterator FindMatching(const Connection &rhs) {
     for (ConnectionList<STATE>::iterator i=begin(); i!=end(); ++i) {

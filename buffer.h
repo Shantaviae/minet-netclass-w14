@@ -25,6 +25,7 @@ class Buffer {
   virtual void Insert(const Buffer &rhs, unsigned offset);
   virtual void AddFront(const Buffer &rhs);
   virtual void AddBack(const Buffer &rhs);
+  virtual void Erase(unsigned offset, size_t size);
 
   virtual Buffer & Extract(unsigned offset, size_t size);
   virtual Buffer & ExtractFront(size_t size);

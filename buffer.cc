@@ -51,6 +51,10 @@ void Buffer::AddFront(const Buffer &rhs)
   datarope.insert(0,rhs.datarope);
 }
 
+void Buffer::Erase(unsigned offset, size_t size)
+{
+  datarope.erase(offset,size);
+}
 
 Buffer & Buffer::Extract(unsigned offset, size_t size)
 {

@@ -26,6 +26,7 @@ LIBMINET_OBJS  = \
            sockint.o                            \
 	   sock_mod_structs.o                   \
            constate.o				\
+           tcpstate.o                           \
 	   route.o                              \
            bitsource.o 
 
