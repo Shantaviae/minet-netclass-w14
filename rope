@@ -1,0 +1,4 @@
+#define rope string
+#define crope string
+
+#define ROPE_COPY(r,o,s,b) (r.copy(b,s,o))

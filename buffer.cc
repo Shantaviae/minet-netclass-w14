@@ -82,7 +82,8 @@ size_t Buffer::GetSize() const
 
 size_t Buffer::GetData(char *buf, size_t size, unsigned offset) const
 {
-  datarope.copy(offset,size,buf);
+  //  datarope.copy(offset,size,buf);
+  ROPE_COPY(datarope,offset,size,buf);
   return size;
 }
 
