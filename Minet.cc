@@ -1024,8 +1024,14 @@ int MinetMonitorReceive(const MinetHandle &handle, TYPE &obj)	\
       return -1;							\
     } else {								\
       MinetMonitoringEventDescription desc;				\
-      desc.Unserialize(MyMonitorFifo);					\
-      obj.Unserialize(MyMonitorFifo);					\
+      desc.timestamp=(double)Time();					\
+      desc.source=MyModuleType;                                         \
+      desc.from=MyModuleType;						\
+      desc.to=(*fifo).module;						\
+      desc.datatype = MINETTYPE;					\
+      desc.optype= MINET_RECEIVE;                                          \
+      desc.Serialize(MyMonitorFifo);					\
+      obj.Serialize(MyMonitorFifo);					\
     }									\
     return 0;								\
   } else {								\

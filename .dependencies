@@ -42,9 +42,11 @@ sock_mod_structs.o: sock_mod_structs.cc sock_mod_structs.h sockint.h \
 constate.o: constate.cc constate.h sockint.h sock.h config.h buffer.h \
  util.h ip.h headertrailer.h packet.h raw_ethernet_packet.h udp.h \
  tcp.h
-minet_socket.o: minet_socket.cc minet_socket.h config.h sockint.h \
- sock.h buffer.h util.h ip.h headertrailer.h packet.h \
- raw_ethernet_packet.h udp.h tcp.h
+minet_socket.o: minet_socket.cc Minet.h config.h buffer.h util.h \
+ debug.h error.h raw_ethernet_packet.h packet.h headertrailer.h \
+ raw_ethernet_packet_buffer.h ethernet.h arp.h ip.h icmp.h udp.h tcp.h \
+ sock.h sockint.h sock_mod_structs.h constate.h Monitor.h \
+ minet_socket.h
 monitor.o: monitor.cc Minet.h config.h buffer.h util.h debug.h error.h \
  raw_ethernet_packet.h packet.h headertrailer.h \
  raw_ethernet_packet_buffer.h ethernet.h arp.h ip.h icmp.h udp.h tcp.h \
