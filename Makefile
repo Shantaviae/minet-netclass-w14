@@ -23,7 +23,8 @@ LIBMINET_OBJS  = \
            sockint.o                            \
 	   sock_mod_structs.o                   \
            constate.o                           \
-	   route.o
+	   route.o				\
+	   icmp.o
 
 EXECOBJS_EXCEPT_READER_WRITER =                 \
            device_driver.o                      \
@@ -47,7 +48,9 @@ EXECOBJS_EXCEPT_READER_WRITER =                 \
            tcp_client.o                         \
            tcp_server.o                         \
            sock_test_app.o                      \
-           sock_test_tcp.o
+           sock_test_tcp.o			\
+	   icmp_module.o
+
 
 READER_WRITER_EXECOBJS=reader.o writer.o
 
