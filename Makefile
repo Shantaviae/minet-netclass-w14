@@ -66,7 +66,7 @@ EXECOBJS_EXCEPT_READER_WRITER =                 \
            http_server3.o                       \
 
 
-READER_WRITER_EXECOBJS=reader.o writer.o
+READER_WRITER_EXECOBJS=reader.o writer.o device_driver2.o
 
 EXECOBJS = $(EXECOBJS_EXCEPT_READER_WRITER) $(READER_WRITER_EXECOBJS)
 
@@ -115,6 +115,10 @@ writer: writer.o $(LIBMINET)
 	$(CXX) writer.o $(WRITERLDFLAGS) -o writer
 	-./fixup.sh
 
+device_driver2 : device_driver2.o $(LIBMINET)
+	$(CXX) device_driver2.o $(READERLDFLAGS) $(WRITERLDFLAGS) -o device_driver2
+	-./fixup.sh
+
 bridge: bridge.o 
 	$(CXX) bridge.o $(READERLDFLAGS) $(WRITERLDFLAGS) -o bridge
 
@@ -135,6 +139,9 @@ writer.o : writer.cc
 	$(CXX) $(WRITERCXXFLAGS) -c $< -o $(@F)
 
 bridge.o : bridge.cc
+	$(CXX) $(READERCXXFLAGS) $(WRITERCXXFLAGS) -c $< -o $(@F)
+
+device_driver2.o : device_driver2.cc
 	$(CXX) $(READERCXXFLAGS) $(WRITERCXXFLAGS) -c $< -o $(@F)
 
 depend:

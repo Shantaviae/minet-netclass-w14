@@ -77,6 +77,9 @@ ostream & operator<<(ostream &os, const MinetModule &mon)
   case MINET_APP:
     os << "MINET_APP";
     break;
+  case MINET_EXTERNAL:
+    os << "MINET_EXTERNAL";
+    break;
   case MINET_DEFAULT:
     os << "MINET_DEFAULT";
     break;
@@ -240,6 +243,8 @@ MinetHandle MinetGetNextHandle()
 {
   return MyNextHandle++;
 }
+
+
 
 
 
@@ -894,6 +899,29 @@ MinetHandle MinetAccept(const MinetModule &mod)
 }
 
 
+int MinetAddExternalConnection(const int inputfd, const int outputfd)
+{
+  FifoData con;
+  con.handle=MinetGetNextHandle();
+  con.module=MINET_EXTERNAL;
+  con.to= outputfd;
+  con.from= inputfd;
+
+  MyFifos.push_back(con);
+
+  MinetMonitoringEventDescription desc;
+
+  desc.timestamp=Time();
+  desc.source=MyModuleType;
+  desc.from=MINET_EXTERNAL;
+  desc.to=MINET_EXTERNAL;
+  desc.datatype=MINET_MONITORINGEVENT;
+  desc.optype=MINET_ACCEPT;
+
+  MinetSendToMonitor(desc);
+
+  return con.handle;
+}
 
 int         MinetClose(const MinetHandle &mh)
 {
@@ -917,8 +945,21 @@ int         MinetClose(const MinetHandle &mh)
   MinetSendToMonitor(desc);
   return 0;
 }
-					  
-  
+	
+
+ 
+int MinetHandleToInputOutputFDs(const MinetHandle &h, int *inputfd, int *outputfd)
+{
+  for (Fifos::iterator i=MyFifos.begin(); i!=MyFifos.end(); ++i) {
+    if ((*i).handle==h) {
+      *inputfd=(*i).from;
+      *outputfd=(*i).to;
+      return 0;
+    }
+  }
+  return -1;
+}
+
 
 int MinetGetNextEvent(MinetEvent &event, double timeout=-1)
 {

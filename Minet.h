@@ -34,6 +34,8 @@
 
 typedef int MinetHandle;
 
+int MinetHandleToInputOutputFDs(const MinetHandle &h, int *inputfd, int *outputfd);
+
 const MinetHandle MINET_NOHANDLE=-1;
 
 enum MinetModule {
@@ -53,6 +55,7 @@ enum MinetModule {
   MINET_SOCK_MODULE,
   MINET_SOCKLIB_MODULE,
   MINET_APP,
+  MINET_EXTERNAL,
   MINET_DEFAULT,
 };
 
@@ -118,6 +121,7 @@ bool        MinetIsModuleMonitored(const MinetModule &mod);
 
 MinetHandle MinetConnect(const MinetModule &mod);
 MinetHandle MinetAccept(const MinetModule &mod);
+MinetHandle MinetAddExternalConnection(const int inputfd, const int outputfd);
 int         MinetClose(const MinetHandle &mh);
 
 int         MinetGetNextEvent(MinetEvent &event, double timeout=-1);
