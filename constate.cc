@@ -1,3 +1,4 @@
+#include <iomanip.h>
 #include "constate.h"
 
 Time::Time(const Time &rhs) : timeval((timeval&)rhs)

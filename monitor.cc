@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <iomanip.h>
 #include "Minet.h"
 #include "Monitor.h"
 
@@ -59,7 +60,7 @@ int main(int argc, char *argv[])
       cerr << "Ignoring this event: "<<myevent<<endl;
     } else {
       MinetReceive(myevent.handle,desc);
-      cerr << desc << " : ";
+      cerr << setprecision(20) << desc << " : ";
       switch (desc.datatype) {
       case MINET_EVENT:
 	MinetReceive(myevent.handle,event); 

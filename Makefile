@@ -78,6 +78,7 @@ LIBNETLDFLAGS = `libnet-config --libs`
 PCAPCFLAGS  = -I/usr/include/pcap
 PCAPLDFLAGS = -lpcap
 
+JAVAC=/usr/local/jdk/bin/javac
 CXX=g++ 
 CC=gcc 
 AR=ar
@@ -90,7 +91,7 @@ LDFLAGS= $(LIBMINET) $(LIBMINET_SOCK) $(LIBMINET)
 READERLDFLAGS= $(LIBMINET) $(PCAPLDFLAGS)
 WRITERLDFLAGS= $(LIBMINET) $(LIBNETLDFLAGS) 
 
-all:  all_except_rw
+all:  all_except_rw MinetTimeline.class
 
 all_all: all_except_rw reader_writer
 
@@ -121,6 +122,10 @@ device_driver2 : device_driver2.o $(LIBMINET)
 
 bridge: bridge.o 
 	$(CXX) bridge.o $(READERLDFLAGS) $(WRITERLDFLAGS) -o bridge
+
+
+MinetTimeline.class : MinetTimeline.java
+	$(JAVAC) MinetTimeline.java
 
 
 %.o : %.cc

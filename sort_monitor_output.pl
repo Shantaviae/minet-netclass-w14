@@ -22,10 +22,17 @@ sub compare {
 
 #  print STDERR "compare $left to $right:";
 
-  $left =~/Time\(sec=(\d+),\s+usec=(\d+),/;
-  $left_time=$1 + $2/1e6;  
-  $right =~/Time\(sec=(\d+),\s+usec=(\d+),/;
-  $right_time=$1 + $2/1e6;
+  $left =~/timestamp=\s*(\S+)\s*,/;
+  $left_time=$1;
+  $right =~/timestamp=\s*(\S+)\s*,/;
+  $right_time=$1;
+#
+#
+# Older Format
+#  $left =~/Time\(sec=(\d+),\s+usec=(\d+),/;
+#  $left_time=$1 + $2/1e6;  
+#  $right =~/Time\(sec=(\d+),\s+usec=(\d+),/;
+#  $right_time=$1 + $2/1e6;
   
   if ($left_time<$right_time) { 
     $ret=-1;
