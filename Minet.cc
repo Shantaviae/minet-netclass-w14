@@ -239,19 +239,17 @@ MinetHandle MinetGetNextHandle()
   return MyNextHandle++;
 }
 
-int         MinetInit(const MinetModule &mod)
+
+
+const char *MinetGetMonitorFifoName(const MinetModule &mod)
 {
-  char *env = getenv("MINET_MONITOR");
-  assert(MyModuleType==MINET_DEFAULT);
-  MyModuleType=mod;
-  MyFifos.clear();
-  MyNextHandle=0;
-  MyMonitorFifo=-1;
-  
 #if MONITOR
+  const char *env=getenv("MINET_MONITOR");
+  
   const char *mf=0;
+  
   if (env!=0) {
-    switch (MyModuleType) {
+    switch (mod) {
     case MINET_MONITOR:
       break;
     case MINET_READER:
@@ -279,7 +277,7 @@ int         MinetInit(const MinetModule &mod)
       mf=strstr(env,"ip_mux") ? ipmux2mon_fifo_name : 0;
       break;
     case MINET_IP_OTHER_MODULE:
-      mf=strstr(env,"ip_other_module") ? ipother2mon_fifo_name : 0;
+      mf=strstr(env,"ipother_module") ? ipother2mon_fifo_name : 0;
       break;
     case MINET_ICMP_MODULE:
       mf=strstr(env,"icmp_module") ? icmp2mon_fifo_name : 0;
@@ -304,7 +302,32 @@ int         MinetInit(const MinetModule &mod)
       mf=0;
       break;
     }
+    return mf;
+  } else {
+    return 0;
   }
+#else
+  return 0;
+#endif
+}
+
+bool        MinetIsModuleMonitored(const MinetModule &mod)
+{
+  return MinetGetMonitorFifoName(mod)!=0;
+}
+
+
+int         MinetInit(const MinetModule &mod)
+{
+  char *env = getenv("MINET_MONITOR");
+  assert(MyModuleType==MINET_DEFAULT);
+  MyModuleType=mod;
+  MyFifos.clear();
+  MyNextHandle=0;
+  MyMonitorFifo=-1;
+  
+#if MONITOR
+  const char *mf=MinetGetMonitorFifoName(mod);
 
   if (mf!=0) { 
     if ((MyMonitorFifo=open(mf,O_WRONLY))<0) { 
@@ -350,6 +373,72 @@ int         MinetDeinit()
   }
   return 0;
 }
+
+bool        MinetIsModuleInConfig(const MinetModule &mod)
+{
+  char *env = getenv("MINET_MODULES");
+  
+  if (env!=0) {
+    switch (mod) {
+    case MINET_MONITOR:
+      return 0!=strstr(env,"monitor");
+      break;
+    case MINET_READER:
+      return 0!=strstr(env,"reader");
+      break;
+    case MINET_WRITER:
+      return 0!=strstr(env,"writer");
+      break;
+    case MINET_DEVICE_DRIVER:
+      return 0!=strstr(env,"device_driver");
+      break;
+    case MINET_ETHERNET_MUX:
+      return 0!=strstr(env,"ethernet_mux");
+      break;
+    case MINET_IP_MODULE:
+      return 0!=strstr(env,"ip_module");
+      break;
+    case MINET_ARP_MODULE:
+      return 0!=strstr(env,"arp_module");
+      break;
+    case MINET_OTHER_MODULE:
+      return 0!=strstr(env,"other_module");
+      break;
+    case MINET_IP_MUX:
+      return 0!=strstr(env,"ip_mux");
+      break;
+    case MINET_IP_OTHER_MODULE:
+      return 0!=strstr(env,"ipother_module");
+      break;
+    case MINET_ICMP_MODULE:
+      return 0!=strstr(env,"icmp_module");
+      break;
+    case MINET_UDP_MODULE:
+      return 0!=strstr(env,"udp_module");
+      break;
+    case MINET_TCP_MODULE:
+      return 0!=strstr(env,"tcp_module");
+      break;
+    case MINET_SOCK_MODULE:
+      return 0!=strstr(env,"sock_module");
+      break;
+    case MINET_SOCKLIB_MODULE:
+      return 0!=strstr(env,"socklib_module");
+      break;
+    case MINET_APP:
+      return 0!=strstr(env,"app");
+      break;
+    case MINET_DEFAULT:
+      return false;
+    default:
+      return false;
+      break;
+    }
+  } else {
+    return false;
+  }
+}  
+
 
 MinetHandle MinetConnect(const MinetModule &mod)
 {
@@ -493,9 +582,12 @@ MinetHandle MinetConnect(const MinetModule &mod)
     // active to icmp, udp, tcp, ipother, and other, passive to socklib module
     switch (mod) {
     case MINET_IP_MUX:
-    case MINET_IP_OTHER_MODULE:
     case MINET_OTHER_MODULE:
       Die("Connect type unimplemented.");
+      break;
+    case MINET_IP_OTHER_MODULE:
+      fifoto=sock2ipother_fifo_name;
+      fifofrom=ipother2sock_fifo_name;
       break;
     case MINET_ICMP_MODULE:
       fifoto=sock2icmp_fifo_name;
@@ -678,7 +770,7 @@ MinetHandle MinetAccept(const MinetModule &mod)
     switch (mod) {
     case MINET_IP_MODULE:
       fifoto=arp2ip_fifo_name;
-      fifoto=ip2arp_fifo_name;
+      fifofrom=ip2arp_fifo_name;
       break;
     default:
       Die("Invalid Accept.");
@@ -748,8 +840,8 @@ MinetHandle MinetAccept(const MinetModule &mod)
   case MINET_IP_OTHER_MODULE:
     switch (mod) { 
     case MINET_SOCK_MODULE:
-      fifoto=other2sock_fifo_name;
-      fifofrom=sock2other_fifo_name;
+      fifoto=ipother2sock_fifo_name;
+      fifofrom=sock2ipother_fifo_name;
       break;
     default:
       Die("Invalid Accept.");
@@ -759,6 +851,7 @@ MinetHandle MinetAccept(const MinetModule &mod)
   case MINET_SOCK_MODULE:
     switch (mod) {
     case MINET_SOCKLIB_MODULE:
+    case MINET_APP:
       fifoto=sock2socklib_fifo_name;
       fifofrom=socklib2sock_fifo_name;
       break;
@@ -793,7 +886,7 @@ MinetHandle MinetAccept(const MinetModule &mod)
   desc.from=mod;
   desc.to=MyModuleType;
   desc.datatype=MINET_MONITORINGEVENT;
-  desc.optype=MINET_DEINIT;
+  desc.optype=MINET_ACCEPT;
 
   MinetSendToMonitor(desc);
 
@@ -819,7 +912,7 @@ int         MinetClose(const MinetHandle &mh)
   desc.from=MyModuleType;
   desc.to=mod;
   desc.datatype=MINET_MONITORINGEVENT;
-  desc.optype=MINET_DEINIT;
+  desc.optype=MINET_CLOSE;
 
   MinetSendToMonitor(desc);
   return 0;
@@ -841,7 +934,8 @@ int MinetGetNextEvent(MinetEvent &event, double timeout=-1)
   while (1) { 
     FD_ZERO(&read_fds);
     maxfd=-1;
-    for (Fifos::iterator i=MyFifos.begin(); i!=MyFifos.end(); ++i) {
+    Fifos::iterator i;
+    for (i=MyFifos.begin(); i!=MyFifos.end(); ++i) {
       FD_SET((*i).from, &read_fds);
       maxfd=MAX(maxfd,(*i).from);
     }

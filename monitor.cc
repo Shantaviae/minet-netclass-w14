@@ -22,30 +22,23 @@ int main(int argc, char *argv[])
     socklib,
     app;
 
-  char *mon=getenv("MINET_MONITOR");
-
-  if (mon==0) { 
-    cerr << "MINET_MONITOR is not set, so monitor is exiting.\n";
-    exit(0);
-  }
-
   MinetInit(MINET_MONITOR);
   
-  reader = strstr(mon, "reader") ? MinetAccept(MINET_READER) : MINET_NOHANDLE;
-  writer = strstr(mon, "writer") ? MinetAccept(MINET_WRITER) : MINET_NOHANDLE;
-  device = strstr(mon, "device_driver") ? MinetAccept(MINET_DEVICE_DRIVER) : MINET_NOHANDLE;
-  ethermux = strstr(mon, "ethernet_mux") ? MinetAccept(MINET_ETHERNET_MUX) : MINET_NOHANDLE;
-  ip=strstr(mon, "ip_module") ? MinetAccept(MINET_IP_MODULE) : MINET_NOHANDLE;
-  arp=strstr(mon, "arp_module") ? MinetAccept(MINET_ARP_MODULE) : MINET_NOHANDLE;
-  other=strstr(mon, "other_module") ? MinetAccept(MINET_OTHER_MODULE) : MINET_NOHANDLE;
-  ipmux=strstr(mon, "ip_mux") ? MinetAccept(MINET_IP_MUX) : MINET_NOHANDLE;
-  ipother=strstr(mon, "ipother_module") ? MinetAccept(MINET_IP_OTHER_MODULE) : MINET_NOHANDLE;
-  icmp=strstr(mon, "icmp_module") ? MinetAccept(MINET_ICMP_MODULE) : MINET_NOHANDLE;
-  udp=strstr(mon, "udp_module") ? MinetAccept(MINET_UDP_MODULE) : MINET_NOHANDLE;
-  tcp=strstr(mon, "tcp_module") ? MinetAccept(MINET_TCP_MODULE) : MINET_NOHANDLE;
-  sock=strstr(mon, "sock_module") ? MinetAccept(MINET_SOCK_MODULE) : MINET_NOHANDLE;
-  socklib=strstr(mon, "socklib_module") ? MinetAccept(MINET_SOCKLIB_MODULE) : MINET_NOHANDLE;
-  app=strstr(mon, "app") ? MinetAccept(MINET_APP) : MINET_NOHANDLE;
+  reader = MinetIsModuleMonitored(MINET_READER) ? MinetAccept(MINET_READER) : MINET_NOHANDLE;
+  writer = MinetIsModuleMonitored(MINET_WRITER) ? MinetAccept(MINET_WRITER) : MINET_NOHANDLE;
+  device = MinetIsModuleMonitored(MINET_DEVICE_DRIVER) ? MinetAccept(MINET_DEVICE_DRIVER) : MINET_NOHANDLE;
+  ethermux = MinetIsModuleMonitored(MINET_ETHERNET_MUX) ? MinetAccept(MINET_ETHERNET_MUX) : MINET_NOHANDLE;
+  ip= MinetIsModuleMonitored(MINET_IP_MODULE) ? MinetAccept(MINET_IP_MODULE) : MINET_NOHANDLE;
+  arp= MinetIsModuleMonitored(MINET_ARP_MODULE) ? MinetAccept(MINET_ARP_MODULE) : MINET_NOHANDLE;
+  other= MinetIsModuleMonitored(MINET_OTHER_MODULE) ? MinetAccept(MINET_OTHER_MODULE) : MINET_NOHANDLE;
+  ipmux= MinetIsModuleMonitored(MINET_IP_MUX) ? MinetAccept(MINET_IP_MUX) : MINET_NOHANDLE;
+  ipother=MinetIsModuleMonitored(MINET_IP_OTHER_MODULE) ? MinetAccept(MINET_IP_OTHER_MODULE) : MINET_NOHANDLE;
+  icmp=MinetIsModuleMonitored(MINET_ICMP_MODULE) ? MinetAccept(MINET_ICMP_MODULE) : MINET_NOHANDLE;
+  udp=MinetIsModuleMonitored(MINET_UDP_MODULE) ? MinetAccept(MINET_UDP_MODULE) : MINET_NOHANDLE;
+  tcp=MinetIsModuleMonitored(MINET_TCP_MODULE) ? MinetAccept(MINET_TCP_MODULE) : MINET_NOHANDLE;
+  sock=MinetIsModuleMonitored(MINET_SOCK_MODULE) ? MinetAccept(MINET_SOCK_MODULE) : MINET_NOHANDLE;
+  socklib=MinetIsModuleMonitored(MINET_SOCKLIB_MODULE) ? MinetAccept(MINET_SOCKLIB_MODULE) : MINET_NOHANDLE;
+  app=MinetIsModuleMonitored(MINET_APP) ? MinetAccept(MINET_APP) : MINET_NOHANDLE;
 
   MinetEvent myevent;
   MinetMonitoringEventDescription desc;

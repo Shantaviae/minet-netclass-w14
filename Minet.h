@@ -12,6 +12,7 @@
 #include "util.h"
 
 #include "raw_ethernet_packet.h"
+#include "raw_ethernet_packet_buffer.h"
 #include "ethernet.h"
 
 #include "arp.h"
@@ -111,6 +112,9 @@ class MinetException : public string {
 
 int         MinetInit(const MinetModule &mod);
 int         MinetDeinit();
+
+bool        MinetIsModuleInConfig(const MinetModule &mod);
+bool        MinetIsModuleMonitored(const MinetModule &mod);
 
 MinetHandle MinetConnect(const MinetModule &mod);
 MinetHandle MinetAccept(const MinetModule &mod);

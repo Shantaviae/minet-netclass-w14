@@ -39,6 +39,7 @@ EXECOBJS_EXCEPT_READER_WRITER =                 \
            icmp_module.o                        \
            udp_module.o                         \
            tcp_module.o                         \
+           ipother_module.o                     \
            app.o				\
            sock_module.o                        \
            udp_client.o                         \
@@ -53,6 +54,7 @@ EXECOBJS_EXCEPT_READER_WRITER =                 \
            test_writer.o                        \
            test_arp.o                           \
            test_raw_ethernet_packet_buffer.o    \
+#           device_driver_new_api.o              \
 
 
 READER_WRITER_EXECOBJS=reader.o writer.o
@@ -72,7 +74,7 @@ CC=gcc
 AR=ar
 RANLAB=ranlib
 
-CXXFLAGS = -g 
+CXXFLAGS = -g -ggdb -gstabs+ 
 READERCXXFLAGS = -g $(PCAPCFLAGS)  
 WRITERCXXFLAGS = -g $(CXXFLAGS) $(LIBNETCFLAGS)
 LDFLAGS= $(LIBMINET) $(LIBMINET_SOCK) $(LIBMINET) 
@@ -108,6 +110,9 @@ writer: writer.o $(LIBMINET)
 	$(CXX) $(CXXFLAGS) -c $< -o $(@F)
 
 device_driver.o : device_driver.cc
+	$(CXX) $(READERCXXFLAGS) $(WRITERCXXFLAGS) -c $< -o $(@F)
+
+device_driver_new_api.o : device_driver_new_api.cc
 	$(CXX) $(READERCXXFLAGS) $(WRITERCXXFLAGS) -c $< -o $(@F)
 
 ethernet.o : ethernet.cc

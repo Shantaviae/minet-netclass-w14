@@ -12,20 +12,8 @@
 
 #include <string.h>
 #include <iostream>
-#include "config.h"
-#include "ip.h"
-#include "arp.h"
-#include "udp.h"
-#include "packet.h"
-#include "ethernet.h"
-#include "raw_ethernet_packet.h"
-#include "constate.h"
 
-#define IP_MUX    1
-#define SOCK      1
-
-
-#define ECHO      0
+#include "Minet.h"
 
 
 struct UDPState {
@@ -35,79 +23,39 @@ struct UDPState {
 
 int main(int argc, char *argv[])
 {
-#if IP_MUX
-  int fromipmux, toipmux;
-#endif
-#if SOCK
-  int fromsock, tosock;
-#endif
+  MinetHandle mux;
+  MinetHandle sock;
 
   ConnectionList<UDPState> clist;
 
-#if IP_MUX
-  fromipmux=open(ipmux2udp_fifo_name,O_RDONLY);
-  toipmux=open(udp2ipmux_fifo_name,O_WRONLY);
-#endif
-#if SOCK
-  if (getenv("MINET_SHIMS") &&
-      strstr(getenv("MINET_SHIMS"),"udp_module+sock_module")) {
-    tosock=open((string(udp2sock_fifo_name)+string("_shim")).c_str(),O_WRONLY);
-    fromsock=open((string(sock2udp_fifo_name)+string("_shim")).c_str(),O_RDONLY);
-  } else {
-    tosock=open(udp2sock_fifo_name,O_WRONLY);
-    fromsock=open(sock2udp_fifo_name,O_RDONLY);
-  }
-#endif
+  MinetInit(MINET_UDP_MODULE);
 
-#if IP_MUX
-  if (toipmux<0 || fromipmux<0) {
-    cerr << "Can't open connection to IP mux\n";
+  mux=MinetIsModuleInConfig(MINET_IP_MUX) ? MinetConnect(MINET_IP_MUX) : MINET_NOHANDLE;
+  sock=MinetIsModuleInConfig(MINET_SOCK_MODULE) ? MinetAccept(MINET_SOCK_MODULE) : MINET_NOHANDLE;
+
+  if (mux==MINET_NOHANDLE && MinetIsModuleInConfig(MINET_IP_MUX)) {
+    MinetSendToMonitor(MinetMonitoringEvent("Can't connect to ip_mux"));
     return -1;
   }
-#endif
-
-#if SOCK
-  if (tosock<0 || fromsock<0) {
-    cerr << "Can't open connection to SOCK module\n";
+  if (sock==MINET_NOHANDLE && MinetIsModuleInConfig(MINET_SOCK_MODULE)) {
+    MinetSendToMonitor(MinetMonitoringEvent("Can't accept from sock_module"));
     return -1;
   }
-#endif
 
-  cerr << "udp_module handling UDP traffic\n";
+  MinetSendToMonitor(MinetMonitoringEvent("udp_module handling udp traffic........"));
 
-  int maxfd=0;
-  fd_set read_fds;
-  int rc;
+  MinetEvent event;
 
-  while (1) {
-    maxfd=0;
-    FD_ZERO(&read_fds);
-#if IP_MUX
-    FD_SET(fromipmux,&read_fds); maxfd=MAX(maxfd,fromipmux);
-#endif
-#if SOCK
-    FD_SET(fromsock,&read_fds); maxfd=MAX(maxfd,fromsock);
-#endif
-
-    rc=select(maxfd+1,&read_fds,0,0,0);
-
-    if (rc<0) { 
-      if (errno==EINTR) { 
-	continue;
-      } else {
-	cerr << "Unknown error in select\n";
-	return -1;
-      }
-    } else if (rc==0) { 
-      cerr << "Unexpected timeout in select\n";
-      return -1;
+  while (MinetGetNextEvent(event)==0) {
+    if (event.eventtype!=MinetEvent::Dataflow 
+	|| event.direction!=MinetEvent::IN) {
+      MinetSendToMonitor(MinetMonitoringEvent("Unknown event ignored."));
     } else {
-#if IP_MUX
-      if (FD_ISSET(fromipmux,&read_fds)) { 
+      if (event.handle==mux) {
 	Packet p;
 	unsigned short len;
 	bool checksumok;
-	p.Unserialize(fromipmux);
+	MinetReceive(mux,p);
 	p.ExtractHeaderFromPayload<UDPHeader>(8);
 	UDPHeader udph;
 	udph=p.FindHeader(Headers::UDPHeader);
@@ -133,16 +81,14 @@ int main(int argc, char *argv[])
 				    len,
 				    EOK);
 	  if (!checksumok) {
-	    cerr << "forwarding packet to sock even though checksum failed.";
+	    MinetSendToMonitor(MinetMonitoringEvent("forwarding packet to sock even though checksum failed"));
 	  }
-	  write.Serialize(tosock);
+	  MinetSend(sock,write);
 	}
       }
-#endif
-#if SOCK
-      if (FD_ISSET(fromsock,&read_fds)) {
+      if (event.handle==sock) {
 	SockRequestResponse req;
-	req.Unserialize(fromsock);
+	MinetReceive(sock,req);
 	switch (req.type) {
 	  // case SockRequestResponse::CONNECT: 
 	case CONNECT: 
@@ -156,7 +102,7 @@ int main(int argc, char *argv[])
 	    // buffer is zero bytes
 	    repl.bytes=0;
 	    repl.error=EOK;
-	    repl.Serialize(tosock);
+	    MinetSend(sock,repl);
 	  }
 	  break;
 	  // case SockRequestResponse::STATUS: 
@@ -186,14 +132,14 @@ int main(int argc, char *argv[])
 	    uh.SetLength(UDP_HEADER_LENGTH+bytes,p);
 	    // Now we want to have the udp header BEHIND the IP header
 	    p.PushBackHeader(uh);
-	    p.Serialize(toipmux);
+	    MinetSend(mux,p);
 	    SockRequestResponse repl;
 	    // repl.type=SockRequestResponse::STATUS;
 	    repl.type=STATUS;
 	    repl.connection=req.connection;
 	    repl.bytes=bytes;
 	    repl.error=EOK;
-	    repl.Serialize(tosock);
+	    MinetSend(sock,repl);
 	  }
 	  break;
 	  // case SockRequestResponse::FORWARD:
@@ -213,7 +159,7 @@ int main(int argc, char *argv[])
 	    repl.connection=req.connection;
 	    repl.error=EOK;
 	    repl.bytes=0;
-	    repl.Serialize(tosock);
+	    MinetSend(sock,repl);
 	  }
 	  break;
 	  // case SockRequestResponse::CLOSE:
@@ -230,7 +176,7 @@ int main(int argc, char *argv[])
 	      repl.error=EOK;
 	      clist.erase(cs);
 	    }
-	    repl.Serialize(tosock);
+	    MinetSend(sock,repl);
 	  }
 	  break;
 	default:
@@ -239,11 +185,10 @@ int main(int argc, char *argv[])
 	    // repl.type=SockRequestResponse::STATUS;
 	    repl.type=STATUS;
 	    repl.error=EWHAT;
-	    repl.Serialize(tosock);
+	    MinetSend(sock,repl);
 	  }
 	}
       }
-#endif
     }
   }
   return 0;

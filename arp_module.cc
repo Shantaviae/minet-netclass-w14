@@ -12,15 +12,8 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#include "debug.h"
-#include "config.h"
-#include "arp.h"
-#include "ethernet.h"
-#include "raw_ethernet_packet.h"
-#include "packet.h"
-#include "util.h"
+#include "Minet.h"
 
-#define IP 1
 
 void usage()
 {
@@ -35,26 +28,21 @@ int main(int argc, char *argv[])
   IPAddress ipaddr(MyIPAddr);
   EthernetAddr ethernetaddr(MyEthernetAddr);
 
-  int muxin = open(mux2arp_fifo_name,O_RDONLY);
-  int muxout = open(arp2mux_fifo_name,O_WRONLY);
-#if IP
-  int reqout = open(arp2ip_fifo_name,O_WRONLY);
-  int reqin = open(ip2arp_fifo_name,O_RDONLY);
-#endif
 
-  if (muxin<0 || muxout<0) { 
-    cerr << "arp_module: Can't communicate with mux ("
-	 << mux2arp_fifo_name<<", "<<arp2mux_fifo_name<<"\n";
-    exit(-1);
+  MinetInit(MINET_ARP_MODULE);
+
+  MinetHandle mux = MinetIsModuleInConfig(MINET_ETHERNET_MUX) ? MinetConnect(MINET_ETHERNET_MUX) : MINET_NOHANDLE;
+  MinetHandle ip = MinetIsModuleInConfig(MINET_IP_MODULE) ? MinetAccept(MINET_IP_MODULE) : MINET_NOHANDLE;
+
+  if (mux==MINET_NOHANDLE && MinetIsModuleInConfig(MINET_ETHERNET_MUX)) {
+    MinetSendToMonitor(MinetMonitoringEvent("Can't connect to ethernet mux"));
+    return -1;
+  }
+  if (ip==MINET_NOHANDLE && MinetIsModuleInConfig(MINET_IP_MODULE)) {
+    MinetSendToMonitor(MinetMonitoringEvent("Can't accept from ip_module"));
+    return -1;
   }
 
-#if IP
-  if (reqin<0 || reqout<0) { 
-    cerr << "arp_module: Can't communicate with IP ("
-	 << ip2arp_fifo_name<<", "<<arp2ip_fifo_name<<"\n";
-    exit(-1);
-  }
-#endif
 
   cache.Update(ARPRequestResponse(ipaddr,ethernetaddr,ARPRequestResponse::RESPONSE_OK));
 
@@ -63,42 +51,24 @@ int main(int argc, char *argv[])
   cerr << "arp_module: answering ARPs for " << ipaddr 
        << " with " << ethernetaddr <<"\n";
 
-  fd_set read_fds;
+  MinetSendToMonitor(MinetMonitoringEvent("arp_module operational."));
+
   int rc;
-  int maxfd;
+  
+  MinetEvent event;
 
-  while (1) {
-    FD_ZERO(&read_fds);
-    FD_SET(muxin,&read_fds); maxfd=muxin;
-#if IP    
-    FD_SET(reqin,&read_fds); maxfd=MAX(maxfd,reqin);
-#endif
-
-    rc=select(maxfd+1,&read_fds,0,0,0);
-
-    if (rc<0) {
-      if (errno==EINTR) {
-	continue;
-      } else {
-	perror("arp_module error in select");
-	exit(-1);
-      }
-    } else if (rc==0) {
-      perror("arp_module unexpected timeout");
-      exit(-1);
+  while (MinetGetNextEvent(event)==0) {
+    if (event.eventtype!=MinetEvent::Dataflow 
+	|| event.direction!=MinetEvent::IN) {
+      MinetSendToMonitor(MinetMonitoringEvent("Unknown event ignored."));
     } else {
-#if IP
-      if (FD_ISSET(reqin,&read_fds)) {
+      if (event.handle==ip) {
 	ARPRequestResponse r;
-	r.Unserialize(reqin);
+	MinetReceive(ip,r);
 	cerr << "Local Request:  "<<r<<"\n";
 	cache.Lookup(r);
 	cerr << "Local Response: "<<r<<"\n";
-	if (CanWriteNow(reqout)) { 
-	  r.Serialize(reqout);
-	} else {
-	  DEBUGPRINTF(1,"arp_module: Dropped request packet\n");
-	}
+	MinetSend(ip,r);
 	if (r.flag==ARPRequestResponse::RESPONSE_UNKNOWN) { 
 	  ARPPacket request(ARPPacket::Request,
 			    ethernetaddr,
@@ -112,13 +82,12 @@ int main(int argc, char *argv[])
 	  request.PushHeader(h);
 
 	  RawEthernetPacket rawout(request);
-	  rawout.Serialize(muxout);
+	  MinetSend(mux,rawout);
 	}
       }
-#endif
-      if (FD_ISSET(muxin,&read_fds)) {
+      if (event.handle==mux) {
 	RawEthernetPacket rawpacket;
-	rawpacket.Unserialize(muxin);
+	MinetReceive(mux,rawpacket);
 	ARPPacket arp(rawpacket);
 
 	if (arp.IsIPToEthernet()) {
@@ -152,7 +121,7 @@ int main(int argc, char *argv[])
 	      repl.PushHeader(h);
 	      
 	      RawEthernetPacket rawout(repl);
-	      rawout.Serialize(muxout);
+	      MinetSend(mux,rawout);
 	      cerr << "Remote Request:  " << arp <<"\n";
 	      cerr << "Remote Response: " << repl <<"\n";
 	    }

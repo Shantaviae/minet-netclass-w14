@@ -60,8 +60,6 @@ struct MinetMonitoringEvent : public string {
 };
 
 
-
-
 #endif
 
 

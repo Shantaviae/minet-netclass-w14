@@ -47,8 +47,14 @@ fi
     mkfifo fifos/icmp2sock
     mkfifo fifos/sock2icmp
 
+    mkfifo fifos/ipother2sock
+    mkfifo fifos/sock2ipother
+
     mkfifo fifos/app2sock
     mkfifo fifos/sock2app
+
+    mkfifo fifos/sock2socklib
+    mkfifo fifos/socklib2sock
 
     mkfifo fifos/reader2mon
     mkfifo fifos/writer2mon
@@ -61,6 +67,7 @@ fi
     mkfifo fifos/udp2mon
     mkfifo fifos/tcp2mon
     mkfifo fifos/icmp2mon
+    mkfifo fifos/ipother2mon
     mkfifo fifos/sock2mon
     mkfifo fifos/socklib2mon
     mkfifo fifos/app2mon
@@ -79,7 +86,8 @@ export MINET_DEBUGLEVEL="0"
 # log xterm gdb
 export MINET_DISPLAY=xterm
 #export MINET_SHIMS="ip_mux+udp_module;udp_module+sock_module;ip_mux+tcp_module;tcp_module+sock_module"
-export MINET_MONITOR="icmp_module ip_module"
+export MINET_MODULES="monitor reader writer device_driver ethernet_mux arp_module ip_module other_module ip_mux icmp_module udp_module tcp_module ipother_module sock_module app"
+export MINET_MONITOR="ethernet_mux arp_module other_module ip_module ip_mux icmp_module udp_module tcp_module ipother_module sock_module app"
 export MINET_MSS=256
 export MINET_MTU=500
 

@@ -28,15 +28,18 @@ LIBMINET_OBJS  = \
            constate.o
 
 EXECOBJS_EXCEPT_READER_WRITER =                 \
+           monitor.o                            \
            device_driver.o                      \
            ethernet_mux.o			\
            arp_module.o                         \
+           ip_module_new_api.o                  \
            ip_module.o                          \
            other_module.o                       \
            ip_mux.o                             \
            icmp_module.o                        \
            udp_module.o                         \
            tcp_module.o                         \
+           ipother_module.o                     \
            app.o				\
            sock_module.o                        \
            udp_client.o                         \
@@ -51,6 +54,7 @@ EXECOBJS_EXCEPT_READER_WRITER =                 \
            test_writer.o                        \
            test_arp.o                           \
            test_raw_ethernet_packet_buffer.o    \
+#           device_driver_new_api.o              \
 
 
 READER_WRITER_EXECOBJS=reader.o writer.o
@@ -106,6 +110,9 @@ writer: writer.o $(LIBMINET)
 	$(CXX) $(CXXFLAGS) -c $< -o $(@F)
 
 device_driver.o : device_driver.cc
+	$(CXX) $(READERCXXFLAGS) $(WRITERCXXFLAGS) -c $< -o $(@F)
+
+device_driver_new_api.o : device_driver_new_api.cc
 	$(CXX) $(READERCXXFLAGS) $(WRITERCXXFLAGS) -c $< -o $(@F)
 
 ethernet.o : ethernet.cc

@@ -9,46 +9,26 @@
 #include <errno.h>
 #include <iostream.h>
 
-
-#include "config.h"
-#include "ip.h"
-#include "arp.h"
-#include "udp.h"
-#include "packet.h"
-#include "ethernet.h"
-#include "raw_ethernet_packet.h"
-#include "sockint.h"
-#include "sock_mod_structs.h"
-
-#define APP    1
-#define TCP    1
-#define UDP    1
-#define ICMP   0
+#include "Minet.h"
 
 SockStatus socks;
 PortStatus ports;
 
-#if TCP
-int fromtcp, totcp;
+MinetHandle tcp;
 Queue tcpq;
-#endif
 
-#if UDP
-int fromudp, toudp;
+MinetHandle udp;
 Queue udpq;
-#endif
 
-#if ICMP
-int fromicmp, toicmp;
-#endif
+MinetHandle icmp;
 
-#if APP
-int fromapp,  toapp;
-#endif
+MinetHandle ipother;
 
-#if TCP
+MinetHandle app;
+
+
 void SendTCPRequest (SockRequestResponse *s, int sock) {
-  s->Serialize(totcp);
+  MinetSend(tcp,*s);
   if (s->type != STATUS) {
     RequestRecord * elt = new RequestRecord(s, sock);
     tcpq.Insert((void *) elt);
@@ -92,16 +72,16 @@ void ProcessTCPMessage (SockRequestResponse * s, int & respond) {
       break;
     case READ_PENDING:     // This assumes that the App can read all the data
                            //    we are sending!
-#if APP
-      appmsg = new SockLibRequestResponse(mSTATUS, 
-					  s->connection,
-					  sock,
-					  s->data,
-					  s->bytes,
-					  s->error);
-      appmsg->Serialize(toapp);
-      delete appmsg;
-#endif
+      if (app!=MINET_NOHANDLE) {
+	appmsg = new SockLibRequestResponse(mSTATUS, 
+					    s->connection,
+					    sock,
+					    s->data,
+					    s->bytes,
+					    s->error);
+	MinetSend(app,*appmsg);
+	delete appmsg;
+      }
       socks.SetStatus(sock, CONNECTED);
       s->error = EOK;
       s->bytes = s->data.GetSize();
@@ -110,61 +90,61 @@ void ProcessTCPMessage (SockRequestResponse * s, int & respond) {
     case ACCEPT_PENDING:   // must remember to deal with port assignment
       socks.SetStatus(sock, LISTENING);
       if (s->error != EOK) {
-#if APP
-	appmsg = new SockLibRequestResponse(mSTATUS, 
-					    s->connection,
-					    sock,
-					    s->data,
-					    s->bytes,
-					    s->error);
-	appmsg->Serialize(toapp);
-	delete appmsg;
-#endif
-	s->error = EOK;
-	break;
-      }
-
-      // Need to fix it so that when we close a socket the port is not made
-      // available if another socket is still attached to it.  Also do error
-      // checking to make sure that local connection didn't get muddled.
-
-      newsock = socks.FindFreeSock();
-      if (newsock > 0) {
-	c = socks.GetConnection(newsock);
-	c->src = s->connection.src;
-	c->dest = s->connection.dest;
-	c->srcport = s->connection.srcport;
-	c->destport = s->connection.destport;
-	c->protocol = s->connection.protocol;
-	socks.SetStatus(newsock, CONNECTED);
-#if APP
-	socks.SetFifoToApp(newsock, toapp);
-	socks.SetFifoFromApp(sock, fromapp);
-	appmsg = new SockLibRequestResponse(mSTATUS,
-					    s->connection,
-					    newsock,
-					    s->data,
-					    s->bytes,
-					    s->error);
-	appmsg->Serialize(toapp);
-	delete appmsg;
-#endif
-	break;
+	if (app!=MINET_NOHANDLE) {
+	  appmsg = new SockLibRequestResponse(mSTATUS, 
+					      s->connection,
+					      sock,
+					      s->data,
+					      s->bytes,
+					      s->error);
+	  MinetSend(app,*appmsg);
+	  delete appmsg;
+	  s->error = EOK;
+	  break;
+	}
+	
+	// Need to fix it so that when we close a socket the port is not made
+	// available if another socket is still attached to it.  Also do error
+	// checking to make sure that local connection didn't get muddled.
+	
+	newsock = socks.FindFreeSock();
+	if (newsock > 0) {
+	  c = socks.GetConnection(newsock);
+	  c->src = s->connection.src;
+	  c->dest = s->connection.dest;
+	  c->srcport = s->connection.srcport;
+	  c->destport = s->connection.destport;
+	  c->protocol = s->connection.protocol;
+	  socks.SetStatus(newsock, CONNECTED);
+	  if (app!=MINET_NOHANDLE) {
+	    socks.SetFifoToApp(newsock, app);
+	    socks.SetFifoFromApp(sock, app);
+	    appmsg = new SockLibRequestResponse(mSTATUS,
+						s->connection,
+						newsock,
+						s->data,
+						s->bytes,
+						s->error);
+	    MinetSend(app,*appmsg);
+	    delete appmsg;
+	    break;
+	  }
+	}
       }
       s->error = ERESOURCE_UNAVAIL;
       break;
     case CONNECT_PENDING:
       if (s->error != EOK) {
-#if APP
-	appmsg = new SockLibRequestResponse(mSTATUS, 
-					    s->connection,
-					    sock,
-					    s->data,
-					    s->bytes,
-					    s->error);
-	appmsg->Serialize(toapp);
-	delete appmsg;
-#endif
+	if (app!=MINET_NOHANDLE) {
+	  appmsg = new SockLibRequestResponse(mSTATUS, 
+					      s->connection,
+					      sock,
+					      s->data,
+					      s->bytes,
+					      s->error);
+	  MinetSend(app,*appmsg);
+	  delete appmsg;
+	}
 	s->error = EOK;
 	socks.CloseSocket(sock);
 	break;
@@ -175,16 +155,18 @@ void ProcessTCPMessage (SockRequestResponse * s, int & respond) {
       c->srcport = s->connection.srcport;
       c->destport = s->connection.destport;
       socks.SetStatus(sock, CONNECTED);
-#if APP
-      appmsg = new SockLibRequestResponse(mSTATUS, 
-					  s->connection,
-					  sock,
-					  s->data,
-					  s->bytes,
-					  s->error);
-      appmsg->Serialize(toapp);
-      delete appmsg;
-#endif
+      if (app!=MINET_NOHANDLE) {
+	
+	appmsg = new SockLibRequestResponse(mSTATUS, 
+					    s->connection,
+					    sock,
+					    s->data,
+					    s->bytes,
+					    s->error);
+	MinetSend(app,*appmsg);
+	delete appmsg;
+      }
+      
       break;
     default:
       respond = 1;
@@ -193,7 +175,7 @@ void ProcessTCPMessage (SockRequestResponse * s, int & respond) {
       break;
     }
     break;
-
+    
   case STATUS:
     respond = 0;
     elt = (RequestRecord *) tcpq.Remove();
@@ -202,51 +184,51 @@ void ProcessTCPMessage (SockRequestResponse * s, int & respond) {
     switch (request->type) {
     case CONNECT:
       if (s->error != EOK) {
-#if APP
-	appmsg = new SockLibRequestResponse(mSTATUS, 
-					    s->connection,
-					    sock,
-					    s->data,
-					    s->bytes,
+	if (app!=MINET_NOHANDLE) {
+	  appmsg = new SockLibRequestResponse(mSTATUS, 
+					      s->connection,
+					      sock,
+					      s->data,
+					      s->bytes,
 					    s->error);
-	appmsg->Serialize(toapp);
-	delete appmsg;
-#endif
+	  MinetSend(app,*appmsg);
+	  delete appmsg;
+	}
 	socks.CloseSocket(sock);
       }
       break;
     case ACCEPT:
       if (s->error != EOK) {
-#if APP
+	if (app!=MINET_NOHANDLE) {
+	  appmsg = new SockLibRequestResponse(mSTATUS, 
+					      s->connection,
+					      sock,
+					      s->data,
+					      s->bytes,
+					    s->error);
+	  MinetSend(app,*appmsg);
+	  delete appmsg;
+	}
+	socks.SetStatus(sock, LISTENING);
+      }
+      break;
+    case WRITE:
+      if (app!=MINET_NOHANDLE) {
 	appmsg = new SockLibRequestResponse(mSTATUS, 
 					    s->connection,
 					    sock,
 					    s->data,
 					    s->bytes,
-					    s->error);
-	appmsg->Serialize(toapp);
-	delete appmsg;
-#endif
-	socks.SetStatus(sock, LISTENING);
-      }
-      break;
-    case WRITE:
-#if APP
-      appmsg = new SockLibRequestResponse(mSTATUS, 
-					  s->connection,
-					  sock,
-					  s->data,
-					  s->bytes,
 					  s->error);
-      appmsg->Serialize(toapp);
-      delete appmsg;
-#endif
+	MinetSend(app,*appmsg);
+	delete appmsg;
+      }
       socks.SetStatus(sock, CONNECTED);
       break;
     }
     delete elt;
     break;
-
+    
   default:
     respond = 1;
     s->type = STATUS;
@@ -254,11 +236,10 @@ void ProcessTCPMessage (SockRequestResponse * s, int & respond) {
     break;
   }
 }
-#endif
 
-#if UDP
+
 void SendUDPRequest (SockRequestResponse *s, int sock) {
-  s->Serialize(toudp);
+  MinetSend(udp,*s);
   if (s->type != STATUS) {
     RequestRecord * elt = new RequestRecord(s, sock);
     udpq.Insert((void *) elt);
@@ -274,9 +255,9 @@ void ProcessUDPMessage (SockRequestResponse * s, int & respond) {
   SockLibRequestResponse *appmsg = NULL;
   Buffer *b;
   int sock;
-
+  
   switch (type) {
-
+    
   case WRITE:
     respond = 1;
     s->type = STATUS;
@@ -301,16 +282,16 @@ void ProcessUDPMessage (SockRequestResponse * s, int & respond) {
       break;
     case READ_PENDING:     // This assumes that the App can read all the data
                            //    we are sending!
-#if APP
-      appmsg = new SockLibRequestResponse(mSTATUS, 
-					  s->connection,
-					  sock,
-					  s->data,
-					  s->bytes,
-					  s->error);
-      appmsg->Serialize(toapp);
-      delete appmsg;
-#endif
+      if (app!=MINET_NOHANDLE) {
+	appmsg = new SockLibRequestResponse(mSTATUS, 
+					    s->connection,
+					    sock,
+					    s->data,
+					    s->bytes,
+					    s->error);
+	MinetSend(app,*appmsg);
+	delete appmsg;
+      }
       socks.SetStatus(sock, CONNECTED);
       s->error = EOK;
       s->bytes = s->data.GetSize();
@@ -331,16 +312,16 @@ void ProcessUDPMessage (SockRequestResponse * s, int & respond) {
     sock = elt->sock;
     switch (request->type) {
     case FORWARD:
-#if APP
-      appmsg = new SockLibRequestResponse(mSTATUS, 
-					  s->connection,
-					  sock,
-					  s->data,
-					  s->bytes,
-					  s->error);
-      appmsg->Serialize(toapp);
-      delete appmsg;
-#endif
+      if (app!=MINET_NOHANDLE) {
+	appmsg = new SockLibRequestResponse(mSTATUS, 
+					    s->connection,
+					    sock,
+					    s->data,
+					    s->bytes,
+					    s->error);
+	MinetSend(app,*appmsg);
+	delete appmsg;
+      }
       if (s->error != EOK) {
 	socks.CloseSocket(sock);
       }
@@ -355,16 +336,16 @@ void ProcessUDPMessage (SockRequestResponse * s, int & respond) {
       }
       break;
     case WRITE:
-#if APP
-      appmsg = new SockLibRequestResponse(mSTATUS, 
-					  s->connection,
-					  sock,
-					  s->data,
-					  s->bytes,
-					  s->error);
-      appmsg->Serialize(toapp);
-      delete appmsg;
-#endif
+      if (app!=MINET_NOHANDLE) {
+	appmsg = new SockLibRequestResponse(mSTATUS, 
+					    s->connection,
+					    sock,
+					    s->data,
+					    s->bytes,
+					    s->error);
+	MinetSend(app,*appmsg);
+	delete appmsg;
+      }
       if ((socks.GetConnection(sock)->dest != IP_ADDRESS_ANY) &&
 	  (socks.GetConnection(sock)->destport != PORT_ANY)) {
 	socks.SetStatus(sock, CONNECTED);
@@ -384,10 +365,7 @@ void ProcessUDPMessage (SockRequestResponse * s, int & respond) {
     break;
   }
 }
-#endif
 
-
-#if APP
 
 int ResolveSrcPort (int sock, const Connection & c) {
   // If the source port in c is unbound, we try to find and reserve a port.
@@ -431,8 +409,8 @@ void ProcessAppRequest(SockLibRequestResponse & s, int & respond)
       socks.SetStatus(sock, UNBOUND);
       c = socks.GetConnection(sock);
       c->protocol = s.connection.protocol;
-      socks.SetFifoToApp(sock, toapp);
-      socks.SetFifoFromApp(sock, fromapp);
+      socks.SetFifoToApp(sock, app);
+      socks.SetFifoFromApp(sock, app);
       s.sockfd = sock;
       s.error = EOK;
     }
@@ -443,7 +421,7 @@ void ProcessAppRequest(SockLibRequestResponse & s, int & respond)
   case mBIND:
     sock = s.sockfd;
     if ((socks.GetStatus(sock) != UNBOUND) || 
-	(toapp != socks.GetFifoToApp(sock))) {
+	(app != socks.GetFifoToApp(sock))) {
       s.error = EINVALID_OP;
       break;
     }    
@@ -461,19 +439,19 @@ void ProcessAppRequest(SockLibRequestResponse & s, int & respond)
     c->srcport = s.connection.srcport;
     protocol = c->protocol;
     if (protocol == IP_PROTO_UDP) {
-#if UDP
-      respond = 0;
-      srr = new SockRequestResponse(FORWARD,
-				    *c,
-				    s.data,
-				    s.bytes,
-				    s.error);
-      SendUDPRequest (srr, sock);
-      break;
-#else
-      s.error = ENOT_IMPLEMENTED;
-      break;
-#endif
+      if (udp!=MINET_NOHANDLE) {
+	respond = 0;
+	srr = new SockRequestResponse(FORWARD,
+				      *c,
+				      s.data,
+				      s.bytes,
+				      s.error);
+	SendUDPRequest (srr, sock);
+	break;
+      } else {
+	s.error = ENOT_IMPLEMENTED;
+	break;
+      }
     }
     socks.SetStatus(sock, BOUND);
     s.error = EOK;
@@ -482,7 +460,7 @@ void ProcessAppRequest(SockLibRequestResponse & s, int & respond)
   case mLISTEN:
     sock = s.sockfd;
     if ((socks.GetStatus(sock) != BOUND) || 
-	(toapp != socks.GetFifoToApp(sock))) {
+	(app != socks.GetFifoToApp(sock))) {
       s.error = EINVALID_OP;
       break;
     }
@@ -502,7 +480,7 @@ void ProcessAppRequest(SockLibRequestResponse & s, int & respond)
   case mACCEPT:
     sock = s.sockfd;
     if ((socks.GetStatus(sock) != LISTENING) || 
-	(toapp != socks.GetFifoToApp(sock))) {
+	(app != socks.GetFifoToApp(sock))) {
       s.error = EINVALID_OP;
       break;
     }
@@ -512,26 +490,26 @@ void ProcessAppRequest(SockLibRequestResponse & s, int & respond)
       s.error = ENOT_SUPPORTED;
       break;
     }
-#if TCP
-    respond = 0;
-    srr = new SockRequestResponse(ACCEPT,
-				  *socks.GetConnection(sock),
-				  s.data,
-				  s.bytes,
-				  s.error);
-    SendTCPRequest (srr, sock);
-    socks.SetStatus(sock, ACCEPT_PENDING);
-    break;
-#else
-    s.sockfd = 0;
-    s.error = ENOT_IMPLEMENTED;
-    break;
-#endif
+    if (tcp!=MINET_NOHANDLE) {
+      respond = 0;
+      srr = new SockRequestResponse(ACCEPT,
+				    *socks.GetConnection(sock),
+				    s.data,
+				    s.bytes,
+				    s.error);
+      SendTCPRequest (srr, sock);
+      socks.SetStatus(sock, ACCEPT_PENDING);
+      break;
+    } else {
+      s.sockfd = 0;
+      s.error = ENOT_IMPLEMENTED;
+      break;
+    }
     
   case mCONNECT:
     sock = s.sockfd;
     status = socks.GetStatus(sock);
-    if ((toapp != socks.GetFifoToApp(sock)) ||
+    if ((app != socks.GetFifoToApp(sock)) ||
 	((status != UNBOUND) && (status != BOUND))) {
       s.error = EINVALID_OP;
       break;
@@ -539,67 +517,67 @@ void ProcessAppRequest(SockLibRequestResponse & s, int & respond)
     c = socks.GetConnection(sock);
     protocol = c->protocol;
     if (protocol == IP_PROTO_UDP) {
-#if UDP
-      respond = 0;
-      if (status == UNBOUND) { 
-	port =  ResolveSrcPort(sock, s.connection);
-	if (port < 0) {
-	  respond = 1;
-	  s.error = ERESOURCE_UNAVAIL;
-	  break;
-	}
-	c->srcport = port;
-	if (s.connection.src == IP_ADDRESS_ANY) {
-	  c->src = MyIPAddr;
-	} else {
-	  c->src = s.connection.src;
-	}
-      } 
-      c->dest = s.connection.dest;
-      c->destport = s.connection.destport;
-      srr = new SockRequestResponse(FORWARD,
-				    *c,
-				    s.data,
-				    s.bytes,
-				    s.error);
-      SendUDPRequest (srr, sock);
-      socks.SetStatus(sock, CONNECTED);
-      break;
-#else
-      s.error = ENOT_IMPLEMENTED;
-      break;
-#endif
-    } else {    
-#if TCP
-      respond = 0;
-      if (status == UNBOUND) { 
-	port =  ResolveSrcPort(sock, s.connection);
-	if (port < 0) {
-	  respond = 1;
-	  s.error = ERESOURCE_UNAVAIL;
-	  break;
-	}
-	c->srcport = port;
-	if (s.connection.src == IP_ADDRESS_ANY) {
-	  c->src = MyIPAddr;
-	} else {
-	  c->src = s.connection.src;
-	}
+      if (udp!=MINET_NOHANDLE) { 
+	respond = 0;
+	if (status == UNBOUND) { 
+	  port =  ResolveSrcPort(sock, s.connection);
+	  if (port < 0) {
+	    respond = 1;
+	    s.error = ERESOURCE_UNAVAIL;
+	    break;
+	  }
+	  c->srcport = port;
+	  if (s.connection.src == IP_ADDRESS_ANY) {
+	    c->src = MyIPAddr;
+	  } else {
+	    c->src = s.connection.src;
+	  }
+	} 
+	c->dest = s.connection.dest;
+	c->destport = s.connection.destport;
+	srr = new SockRequestResponse(FORWARD,
+				      *c,
+				      s.data,
+				      s.bytes,
+				      s.error);
+	SendUDPRequest (srr, sock);
+	socks.SetStatus(sock, CONNECTED);
+	break;
+      } else {
+	s.error = ENOT_IMPLEMENTED;
+	break;
       }
-      c->dest = s.connection.dest;
-      c->destport = s.connection.destport;
-      srr = new SockRequestResponse(CONNECT,
-				    *c,
-				    s.data,
-				    s.bytes,
-				    s.error);
-      SendTCPRequest (srr, sock);
-      socks.SetStatus(sock, CONNECT_PENDING);
-      break;
-#else
-      s.error = ENOT_IMPLEMENTED;
-      break;
-#endif
+    } else {    
+      if (tcp!=MINET_NOHANDLE) { 
+	respond = 0;
+	if (status == UNBOUND) { 
+	  port =  ResolveSrcPort(sock, s.connection);
+	  if (port < 0) {
+	    respond = 1;
+	    s.error = ERESOURCE_UNAVAIL;
+	    break;
+	  }
+	  c->srcport = port;
+	  if (s.connection.src == IP_ADDRESS_ANY) {
+	    c->src = MyIPAddr;
+	  } else {
+	    c->src = s.connection.src;
+	  }
+	}
+	c->dest = s.connection.dest;
+	c->destport = s.connection.destport;
+	srr = new SockRequestResponse(CONNECT,
+				      *c,
+				      s.data,
+				      s.bytes,
+				      s.error);
+	SendTCPRequest (srr, sock);
+	socks.SetStatus(sock, CONNECT_PENDING);
+	break;
+      } else {
+	s.error = ENOT_IMPLEMENTED;
+	break;
+      }
     }
     
   case mREAD:
@@ -607,7 +585,7 @@ void ProcessAppRequest(SockLibRequestResponse & s, int & respond)
     if (((socks.GetStatus(sock) != CONNECTED) &&
 	 (! ((socks.GetStatus(sock) == BOUND) &&
 	     (socks.GetConnection(sock)->protocol == IP_PROTO_UDP)))) || 
-	(toapp != socks.GetFifoToApp(sock))) {
+	(app != socks.GetFifoToApp(sock))) {
       s.data.Clear();
       s.error = EINVALID_OP;
       break;
@@ -629,76 +607,76 @@ void ProcessAppRequest(SockLibRequestResponse & s, int & respond)
   case mWRITE:
     sock = s.sockfd;
     if ((socks.GetStatus(sock) != CONNECTED) || 
-	(toapp != socks.GetFifoToApp(sock))) {
+	(app != socks.GetFifoToApp(sock))) {
       s.bytes = 0;
       s.error = EINVALID_OP;
       break;
     }
     protocol = socks.GetConnection(sock)->protocol;
     if (protocol == IP_PROTO_UDP) {
-#if UDP
-      respond = 0;
-      srr = new SockRequestResponse(WRITE,
-				    *socks.GetConnection(sock),
-				    s.data,
-				    s.bytes,
-				    s.error);
-      SendUDPRequest (srr, sock);    
-      socks.SetStatus(sock, WRITE_PENDING);
-      break;
-#else
-      s.bytes = 0;
-      s.error = ENOT_IMPLEMENTED;
-      break;
-#endif
+      if (udp!=MINET_NOHANDLE) { 
+	respond = 0;
+	srr = new SockRequestResponse(WRITE,
+				      *socks.GetConnection(sock),
+				      s.data,
+				      s.bytes,
+				      s.error);
+	SendUDPRequest (srr, sock);    
+	socks.SetStatus(sock, WRITE_PENDING);
+	break;
+      } else {
+	s.bytes = 0;
+	s.error = ENOT_IMPLEMENTED;
+	break;
+      }
     } else {
-#if TCP
-      respond = 0;
-      srr = new SockRequestResponse(WRITE,
-				    *socks.GetConnection(sock),
-				    s.data,
-				    s.bytes,
-				    s.error);
-      SendTCPRequest (srr, sock);    
-      socks.SetStatus(sock, WRITE_PENDING);
-      break;
-#else
-      s.bytes = 0;
-      s.error = ENOT_IMPLEMENTED;
-      break;
-#endif
+      if (tcp!=MINET_NOHANDLE) { 
+	respond = 0;
+	srr = new SockRequestResponse(WRITE,
+				      *socks.GetConnection(sock),
+				      s.data,
+				      s.bytes,
+				      s.error);
+	SendTCPRequest (srr, sock);    
+	socks.SetStatus(sock, WRITE_PENDING);
+	break;
+      } else {
+	s.bytes = 0;
+	s.error = ENOT_IMPLEMENTED;
+	break;
+      }
     }
   case mCLOSE:
     sock = s.sockfd;
-    if (toapp != socks.GetFifoToApp(sock)) {
+    if (app != socks.GetFifoToApp(sock)) {
       s.error = EINVALID_OP;
       break;
     }
     protocol = socks.GetConnection(sock)->protocol;
     if (protocol == IP_PROTO_UDP) {
-#if UDP
-      srr = new SockRequestResponse(CLOSE,
-				    *socks.GetConnection(sock),
-				    s.data,
-				    s.bytes,
-				    s.error);
-      SendUDPRequest (srr, sock);
-      s.error = EOK;
-#else
-      s.error = ENOT_IMPLEMENTED;
-#endif
+      if (udp!=MINET_NOHANDLE) { 
+	srr = new SockRequestResponse(CLOSE,
+				      *socks.GetConnection(sock),
+				      s.data,
+				      s.bytes,
+				      s.error);
+	SendUDPRequest (srr, sock);
+	s.error = EOK;
+      } else {
+	s.error = ENOT_IMPLEMENTED;
+      }
     } else {
-#if TCP
-      srr = new SockRequestResponse(CLOSE,
-				    *socks.GetConnection(sock),
-				    s.data,
-				    s.bytes,
-				    s.error);
-      SendTCPRequest (srr, sock);
-      s.error = EOK;
-#else
-      s.error = ENOT_IMPLEMENTED;
-#endif
+      if (tcp!=MINET_NOHANDLE) { 
+	srr = new SockRequestResponse(CLOSE,
+				      *socks.GetConnection(sock),
+				      s.data,
+				      s.bytes,
+				      s.error);
+	SendTCPRequest (srr, sock);
+	s.error = EOK;
+      } else {
+	s.error = ENOT_IMPLEMENTED;
+      }
     }
     socks.CloseSocket(sock);
     break;
@@ -707,123 +685,78 @@ void ProcessAppRequest(SockLibRequestResponse & s, int & respond)
     break;
   }
 }
-#endif
 
 int main(int argc, char *argv[]) {
-#if TCP
-  fromtcp=open(tcp2sock_fifo_name,O_RDONLY);
-  totcp=open(sock2tcp_fifo_name,O_WRONLY);
-  if (totcp<0 || fromtcp<0) {
-    cerr << "Can't open connection to TCP module\n";
+
+  MinetInit(MINET_SOCK_MODULE);
+  
+  tcp=MinetIsModuleInConfig(MINET_TCP_MODULE) ? MinetConnect(MINET_TCP_MODULE) : MINET_NOHANDLE;
+  udp=MinetIsModuleInConfig(MINET_UDP_MODULE) ? MinetConnect(MINET_UDP_MODULE) : MINET_NOHANDLE;
+  icmp=MinetIsModuleInConfig(MINET_ICMP_MODULE) ? MinetConnect(MINET_ICMP_MODULE) : MINET_NOHANDLE;
+  ipother=MinetIsModuleInConfig(MINET_IP_OTHER_MODULE) ? MinetConnect(MINET_IP_OTHER_MODULE) : MINET_NOHANDLE;
+  app=MinetIsModuleInConfig(MINET_APP) ? MinetAccept(MINET_APP) : MinetIsModuleInConfig(MINET_SOCKLIB_MODULE) ? MinetAccept(MINET_SOCKLIB_MODULE) : MINET_NOHANDLE;
+  
+  if (tcp==MINET_NOHANDLE && MinetIsModuleInConfig(MINET_TCP_MODULE)) {
+    MinetSendToMonitor(MinetMonitoringEvent("Can't connect to tcp module"));
     return -1;
   }
-#endif
-
-#if UDP
-  fromudp=open(udp2sock_fifo_name,O_RDONLY);
-  toudp=open(sock2udp_fifo_name,O_WRONLY);
-  if (toudp<0 || fromudp<0) {
-    cerr << "Can't open connection to UDP module\n";
+  if (udp==MINET_NOHANDLE && MinetIsModuleInConfig(MINET_UDP_MODULE)) {
+    MinetSendToMonitor(MinetMonitoringEvent("Can't connect to udp module"));
     return -1;
   }
-#endif
-
-#if ICMP
-  fromicmp=open(icmp2_fifo_name,O_RDONLY);
-  toicmp=open(icmp2sock_fifo_name,O_WRONLY);
-  if (toicmp<0 || fromicmp<0) {
-    cerr << "Can't open connection to ICMP module\n";
+  if (icmp==MINET_NOHANDLE && MinetIsModuleInConfig(MINET_ICMP_MODULE)) {
+    MinetSendToMonitor(MinetMonitoringEvent("Can't connect to icmp module"));
     return -1;
   }
-#endif
-
-#if APP
-  toapp=open(sock2app_fifo_name,O_WRONLY);
-  fromapp=open(app2sock_fifo_name,O_RDONLY);
-  if (toapp<0 || fromapp<0) {
-    cerr << "Can't open connection to APP\n";
+  if (ipother==MINET_NOHANDLE && MinetIsModuleInConfig(MINET_IP_OTHER_MODULE)) {
+    MinetSendToMonitor(MinetMonitoringEvent("Can't connect to ipother module"));
     return -1;
   }
-#endif
+  if (app==MINET_NOHANDLE && (MinetIsModuleInConfig(MINET_APP) || MinetIsModuleInConfig(MINET_SOCKLIB_MODULE))) {
+    MinetSendToMonitor(MinetMonitoringEvent("Can't connect to app or socklib module"));
+    return -1;
+  }
+  
+  
+  MinetSendToMonitor(MinetMonitoringEvent("sock_module fully armed and operational"));
+		     
+		     
+  MinetEvent event;
 
-  cerr << "sock_module fully armed and operational...\n";
-
-  int maxfd;
-  fd_set read_fds;
-  int rc;
-
-  while (1) {
-    maxfd=0;
-    FD_ZERO(&read_fds);
-#if TCP
-    FD_SET(fromtcp, &read_fds); 
-    maxfd = MAX(maxfd, fromtcp);
-#endif
-#if UDP
-    FD_SET(fromudp, &read_fds); 
-    maxfd = MAX(maxfd, fromudp);
-#endif
-#if ICMP
-    FD_SET(fromicmp, &read_fds); 
-    maxfd = MAX(maxfd, fromicmp);
-#endif
-#if APP
-    FD_SET(fromapp, &read_fds); 
-    maxfd = MAX(maxfd, fromapp);
-#endif
-
-    rc=select(maxfd+1, &read_fds, 0, 0, 0);
-
-    if (rc<0) { 
-      if (errno==EINTR) { 
-	continue;
-      } else {
-	cerr << "Unknown error in select\n";
-	return -1;
-      }
-    } else if (rc==0) { 
-      cerr << "Unexpected timeout in select\n";
-      return -1;
+  while (MinetGetNextEvent(event)==0) {
+    if (event.eventtype!=MinetEvent::Dataflow 
+	|| event.direction!=MinetEvent::IN) {
+      MinetSendToMonitor(MinetMonitoringEvent("Unknown event ignored."));
     } else {
-#if TCP
-      if (FD_ISSET(fromtcp, &read_fds)) {
+      if (event.handle==tcp) {
 	int respond;
 	SockRequestResponse *s = new SockRequestResponse;
-	s->Unserialize(fromtcp);
+	MinetReceive(tcp,*s);
 	ProcessTCPMessage(s, respond);
 	if (respond)
-	  s->Serialize(totcp);
+	  MinetSend(tcp,*s);
       }	
-#endif
-#if UDP
-      // Fill this in later.
-      if (FD_ISSET(fromudp, &read_fds)) { 
+      if (event.handle==udp) {
 	int respond;
 	SockRequestResponse *s = new SockRequestResponse;
-	s->Unserialize(fromudp);
+	MinetReceive(udp,*s);
 	ProcessUDPMessage(s, respond);
 	if (respond)
-	  s->Serialize(toudp);
+	  MinetSend(udp,*s);
       }
-#endif
-#if ICMP
-      // Fill this in once ICMP is implemented :)
-      if (FD_ISSET(fromicmp, &read_fds)) { 
+      if (event.handle==icmp) {
 	SockRequestResponse s;
-	s.Unserialize(fromicmp);
-	cerr << s << "\n";
+	MinetReceive(icmp,s);
+	MinetSendToMonitor(MinetMonitoringEvent("Ignoring request from icmp - unimplemented"));
       }
-#endif
-#if APP
-      if (FD_ISSET(fromapp, &read_fds)) { 
+      if (event.handle==app) {
 	int respond;
 	SockLibRequestResponse s; 
-	s.Unserialize(fromapp);
+	MinetReceive(app,s);
 	ProcessAppRequest(s, respond);
 	if (respond)
-	  s.Serialize(toapp);
+	  MinetSend(app,s);
       }
-#endif
     }
   }
   return 0;

@@ -15,46 +15,26 @@
 
 #include "Minet.h"
 
-#define IP_MUX    1
-#define SOCK      0
-
-
-#define ECHO      0
-
-
 
 int main(int argc, char *argv[])
 {
 
-#if IP_MUX
   MinetHandle ipmux;
-#endif
-#if SOCK
   MinetHandle sock;
-#endif
 
   MinetInit(MINET_ICMP_MODULE);
 
-#if IP_MUX
-  ipmux=MinetConnect(MINET_IP_MUX);
-#endif
-#if SOCK
-  sock=MinetAccept(MINET_SOCK_MODULE);
-#endif
+  ipmux=MinetIsModuleInConfig(MINET_IP_MUX) ? MinetConnect(MINET_IP_MUX) : MINET_NOHANDLE;
+  sock=MinetIsModuleInConfig(MINET_SOCK_MODULE) ? MinetAccept(MINET_SOCK_MODULE) : MINET_NOHANDLE;
 
-#if IP_MUX
-  if (ipmux==MINET_NOHANDLE) {
+  if (ipmux==MINET_NOHANDLE && MinetIsModuleInConfig(MINET_IP_MUX)) {
     MinetSendToMonitor(MinetMonitoringEvent("Can't connect to ipmux"));
     return -1;
   }
-#endif
-
-#if SOCK
-  if (sock==MINET_NOHANDLE) {
+  if (sock==MINET_NOHANDLE && MinetIsModuleInConfig(MINET_SOCK_MODULE)) {
     MinetSendToMonitor(MinetMonitoringEvent("Can't connect to sock_module"));
     return -1;
   }
-#endif
 
   MinetSendToMonitor(MinetMonitoringEvent("icmp_module handling icmp traffic"));
 
@@ -65,7 +45,6 @@ int main(int argc, char *argv[])
 	|| event.direction!=MinetEvent::IN) {
       MinetSendToMonitor(MinetMonitoringEvent("Unknown event ignored."));
     } else {
-#if IP_MUX
       if (event.handle==ipmux) {
 	Packet p;
 	unsigned short len;
@@ -74,7 +53,6 @@ int main(int argc, char *argv[])
 	MinetSendToMonitor(MinetMonitoringEvent("Got ICMP Packet!"));
 	cerr << "Got ICMP Packet! " << p << endl;
       }
-#endif
     }
   }
   MinetDeinit();

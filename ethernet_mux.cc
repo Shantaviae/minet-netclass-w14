@@ -11,159 +11,83 @@
 
 #include <iostream>
 
-#include "debug.h"
-#include "config.h"
-#include "ethernet.h"
-#include "raw_ethernet_packet.h"
 
-#define ARP   1
-#define IP    1
-#define OTHER 1
+#include "Minet.h"
 
 
 int main(int argc, char * argv[])
 {
-  int etherin,etherout, arpin,arpout, ipin,ipout, otherin, otherout;
+  MinetHandle dd, ip, other, arp;
 
-  etherin=open(ether2mux_fifo_name,O_RDONLY);
-  etherout=open(mux2ether_fifo_name,O_WRONLY);
-  //etherout=open("fifos/test",O_WRONLY);
-#if ARP
-  arpout=open(mux2arp_fifo_name,O_WRONLY);
-  arpin=open(arp2mux_fifo_name,O_RDONLY);
-#endif
-#if IP
-  ipout=open(mux2ip_fifo_name,O_WRONLY);
-  ipin=open(ip2mux_fifo_name,O_RDONLY);
-#endif
-#if OTHER
-  otherout=open(mux2other_fifo_name,O_WRONLY);
-  otherin=open(other2mux_fifo_name,O_RDONLY);
-#endif
+  MinetInit(MINET_ETHERNET_MUX);
+  
+  dd=MinetIsModuleInConfig(MINET_DEVICE_DRIVER) ? MinetConnect(MINET_DEVICE_DRIVER) : MINET_NOHANDLE;
+  arp=MinetIsModuleInConfig(MINET_ARP_MODULE) ? MinetAccept(MINET_ARP_MODULE) : MINET_NOHANDLE;
+  ip=MinetIsModuleInConfig(MINET_IP_MODULE) ? MinetAccept(MINET_IP_MODULE) : MINET_NOHANDLE;
+  other=MinetIsModuleInConfig(MINET_OTHER_MODULE) ? MinetAccept(MINET_OTHER_MODULE) : MINET_NOHANDLE;
 
-  if (etherin<0 || etherout<0) {
-    cerr << "Can't connect to ethernet device driver ("
-	 << ether2mux_fifo_name<<","<< mux2ether_fifo_name<<"\n";
-    exit(-1);
+  if (dd==MINET_NOHANDLE && MinetIsModuleInConfig(MINET_DEVICE_DRIVER)) {
+    MinetSendToMonitor(MinetMonitoringEvent("Can't connect to device driver"));
+    return -1;
   }
-#if ARP
-  if (arpin<0 || arpout<0) {
-    cerr << "Can't connect to ARP module ("
-	 << arp2mux_fifo_name<<","<< mux2arp_fifo_name<<"\n";
-    exit(-1);
+  if (arp==MINET_NOHANDLE && MinetIsModuleInConfig(MINET_ARP_MODULE)) {
+    MinetSendToMonitor(MinetMonitoringEvent("Can't accept from arp module"));
+    return -1;
   }
-#endif
-#if IP
-  if (ipin<0 || ipout<0) {
-    cerr << "Can't connect to IP module ("
-	 << arp2mux_fifo_name<<","<< mux2arp_fifo_name<<"\n";
-    exit(-1);
+  if (ip==MINET_NOHANDLE && MinetIsModuleInConfig(MINET_IP_MODULE)) {
+    MinetSendToMonitor(MinetMonitoringEvent("Can't accept from ip module"));
+    return -1;
   }
-#endif
-#if OTHER
-  if (otherin<0 || otherout<0) {
-    cerr << "Can't connect to other module ("
-	 << other2mux_fifo_name<<","<< mux2other_fifo_name<<"\n";
-    exit(-1);
+  if (other==MINET_NOHANDLE && MinetIsModuleInConfig(MINET_OTHER_MODULE)) {
+    MinetSendToMonitor(MinetMonitoringEvent("Can't accept from other module"));
+    return -1;
   }
-#endif
 
 
-  cerr << "ethernet_mux operating\n";
+  MinetSendToMonitor(MinetMonitoringEvent("ethernet_mux operating"));
 
-  fd_set read_fds;
+  MinetEvent event;
+
   int rc;
-  int maxfd;
 
-  while (1) {
-    FD_ZERO(&read_fds);
-    FD_SET(etherin,&read_fds);  maxfd=etherin;
-#if ARP
-    FD_SET(arpin,&read_fds); maxfd=MAX(maxfd,arpin);
-#endif
-#if IP
-    FD_SET(ipin,&read_fds); maxfd=MAX(maxfd,ipin);
-#endif
-#if OTHER
-    FD_SET(otherin,&read_fds); maxfd=MAX(maxfd,otherin);
-#endif
-
-    rc=select(maxfd+1,&read_fds,0,0,0);
-
-    if (rc<0) {
-      if (errno==EINTR) {
-	continue;
-      } else {
-	perror("ethernet_mux error in select");
-	exit(-1);
-      }
-    } else if (rc==0) {
-      perror("ethernet_mux unexpected timeout");
-      exit(-1);
+  while (MinetGetNextEvent(event)==0) {
+    if (event.eventtype!=MinetEvent::Dataflow 
+	|| event.direction!=MinetEvent::IN) {
+      MinetSendToMonitor(MinetMonitoringEvent("Unknown event ignored."));
     } else {
-      if (FD_ISSET(etherin,&read_fds)) {
+      if (event.handle==dd) {
 	RawEthernetPacket raw;
 	unsigned short type;
-	raw.Unserialize(etherin);
+	MinetReceive(dd,raw);
 	memcpy((char*)(&type),&(raw.data[12]),2);
 	type=ntohs(type);
 	switch (type) {
 	case PROTO_ARP:
-	  if (ARP && CanWriteNow(arpout)) {
-	    raw.Serialize(arpout);
-	  } else {
-	    DEBUGPRINTF(1,"ethernet_mux: Dropped incoming ARP packet\n");
-	  }
+	  MinetSend(arp,raw);
 	  break;
 	case PROTO_IP:
-	  if (IP && CanWriteNow(ipout)) { 
-	    raw.Serialize(ipout);
-	  } else {
-	    DEBUGPRINTF(1,"ethernet_mux: Dropped incoming IP packet\n");
-	  }
+	  MinetSend(ip,raw);
 	  break;
 	default:
-	  if (OTHER && CanWriteNow(otherout)) { 
-	    raw.Serialize(otherout);
-	  } else {
-	    DEBUGPRINTF(1,"ethernet_mux: Dropped incoming OTHER packet\n");
-	  }
+	  MinetSend(other,raw);
+	  break;
 	}
       }
-#if ARP
-      if (FD_ISSET(arpin,&read_fds)) {
+      if (event.handle==arp) {
 	RawEthernetPacket p;
-	p.Unserialize(arpin);
-	if (CanWriteNow(etherout)) { 
-	  cerr << "Writing out ARP Packet: " << p <<"\n";
-	  p.Serialize(etherout);
-	} else {
-	  DEBUGPRINTF(1,"ethernet_mux: Dropped outgoing ARP packet\n");
-	}
+	MinetReceive(arp,p);
+	MinetSend(dd,p);
       }
-#endif
-#if IP
-      if (FD_ISSET(ipin,&read_fds)) {
+      if (event.handle==ip) {
 	RawEthernetPacket p;
-	p.Unserialize(ipin);
-	if (CanWriteNow(etherout)) { 
-	  p.Serialize(etherout);
-	} else {
-	  DEBUGPRINTF(1,"ethernet_mux: Dropped outgoing IP packet\n");
-	}
+	MinetReceive(ip,p);
+	MinetSend(dd,p);
       }
-#endif
-#if OTHER
-      if (FD_ISSET(otherin,&read_fds)) {
+      if (event.handle==other) {
 	RawEthernetPacket p;
-	p.Unserialize(otherin);
-	if (CanWriteNow(etherout)) { 
-	  p.Serialize(etherout);
-	} else {
-	  DEBUGPRINTF(1,"ethernet_mux: Dropped outgoing OTHER packet\n");
-	}
+	MinetReceive(other,p);
+	MinetSend(dd,p);
       }
-#endif
     }
   }
 }
