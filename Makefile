@@ -84,7 +84,7 @@ CC=gcc
 AR=ar
 RANLAB=ranlib
 
-CXXFLAGS = -g -ggdb -gstabs+ 
+CXXFLAGS = -g -ggdb -gstabs+ -Wall
 READERCXXFLAGS = -g $(PCAPCFLAGS)  
 WRITERCXXFLAGS = -g $(CXXFLAGS) $(LIBNETCFLAGS)
 LDFLAGS= $(LIBMINET) $(LIBMINET_SOCK) $(LIBMINET) 
