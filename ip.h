@@ -29,6 +29,7 @@ extern IPAddress MyIPAddr;
 const IPAddress          IP_ADDRESS_BROADCAST(0xffffffffU);
 const IPAddress          IP_ADDRESS_NONE(0x00000000U);
 const IPAddress          IP_ADDRESS_ANY(IP_ADDRESS_NONE);
+const IPAddress          IP_ADDRESS_LO("127.0.0.1");
 
 const unsigned char      IP_HEADER_BASE_LENGTH_IN_WORDS=5;
 const unsigned char      IP_HEADER_BASE_LENGTH=IP_HEADER_BASE_LENGTH_IN_WORDS*4;

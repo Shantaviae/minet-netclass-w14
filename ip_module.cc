@@ -12,8 +12,13 @@
 
 
 #include <iostream>
-
-#include "Minet.h"
+#include "config.h"
+#include "ip.h"
+#include "arp.h"
+#include "packet.h"
+#include "ethernet.h"
+#include "raw_ethernet_packet.h"
+#include "route.h"
 
 #define ETHER_MUX 1
 #define IP_MUX    1
@@ -23,71 +28,95 @@
 int main(int argc, char *argv[])
 {
 #if ETHER_MUX
-  MinetHandle ethermux;
+  int fromethermux, toethermux;
 #endif
 #if IP_MUX
-  MinetHandle ipmux;
+  int fromipmux, toipmux;
 #endif
 #if ARP
-  MinetHandle arp;
-#endif
-
-  MinetInit(MINET_IP_MODULE);
-
-#if ETHER_MUX
-  ethermux=MinetConnect(MINET_ETHERNET_MUX);
-#endif
-#if ARP
-  arp=MinetConnect(MINET_ARP_MODULE);
-#endif
-#if IP_MUX
-  ipmux=MinetAccept(MINET_IP_MUX);
+  int fromarp, toarp;
 #endif
 
 #if ETHER_MUX
-  if (ethermux==MINET_NOHANDLE) {
-    MinetSendToMonitor(MinetMonitoringEvent("Can't connect to ethermux"));
+  fromethermux=open(mux2ip_fifo_name,O_RDONLY);
+  toethermux=open(ip2mux_fifo_name,O_WRONLY);
+#endif
+#if IP_MUX
+  toipmux=open(ip2ipmux_fifo_name,O_WRONLY);
+  fromipmux=open(ipmux2ip_fifo_name,O_RDONLY);
+#endif
+#if ARP
+  toarp=open(ip2arp_fifo_name,O_WRONLY);
+  fromarp=open(arp2ip_fifo_name,O_RDONLY);
+#endif
+
+#if ETHER_MUX
+  if (toethermux<0 || fromethermux<0) {
+    cerr << "Can't open connection to ethernet mux\n";
     return -1;
   }
 #endif
 
 #if IP_MUX
-  if (ipmux==MINET_NOHANDLE) {
-    MinetSendToMonitor(MinetMonitoringEvent("Can't connect to ipmux"));
-  }
-#endif
-
-#if ARP
-  if (arp==MINET_NOHANDLE) {
-    MinetSendToMonitor(MinetMonitoringEvent("Can't connect to arp_module"));
+  if (toipmux<0 || fromipmux<0) {
+    cerr << "Can't open connection to IP mux\n";
     return -1;
   }
 #endif
 
-  MinetSendToMonitor(MinetMonitoringEvent("ip_module handling IP traffic........"));
+#if ARP
+  if (toarp<0 || fromarp<0) {
+    cerr << "Can't open connection to ARP module\n";
+    return -1;
+  }
+#endif
 
-  MinetEvent event;
+  cerr << "ip_module handling IP traffic...\n";
 
-  while (MinetGetNextEvent(event)==0) {
-    if (event.eventtype!=MinetEvent::Dataflow 
-	|| event.direction!=MinetEvent::IN) {
-      MinetSendToMonitor(MinetMonitoringEvent("Unknown event ignored."));
+  int maxfd=0;
+  fd_set read_fds;
+  int rc;
+
+  while (1) {
+    maxfd=0;
+    FD_ZERO(&read_fds);
+#if ETHER_MUX
+    FD_SET(fromethermux,&read_fds); maxfd=MAX(maxfd,fromethermux);
+#endif
+#if IP_MUX
+    FD_SET(fromipmux,&read_fds); maxfd=MAX(maxfd,fromipmux);
+#endif
+
+    
+    rc=select(maxfd+1,&read_fds,0,0,0);
+
+    if (rc<0) { 
+      if (errno==EINTR) { 
+	continue;
+      } else {
+	cerr << "Unknown error in select\n";
+	return -1;
+      }
+    } else if (rc==0) { 
+      cerr << "Unexpected timeout in select\n";
+      return -1;
     } else {
 #if ETHER_MUX
-      if (event.handle==ethermux) {
+      if (FD_ISSET(fromethermux,&read_fds)) { 
 	RawEthernetPacket raw;
-	MinetReceive(ethermux,raw);
+	raw.Unserialize(fromethermux);
 	Packet p(raw);
 	p.ExtractHeaderFromPayload<EthernetHeader>(ETHERNET_HEADER_LEN);
 	p.ExtractHeaderFromPayload<IPHeader>(IPHeader::EstimateIPHeaderLength(p));
 	IPHeader iph;
 	iph=p.FindHeader(Headers::IPHeader);
+	EthernetHeader eh;
+	eh = p.FindHeader(Headers::EthernetHeader);
 
 	IPAddress toip;
 	iph.GetDestIP(toip);
 	if (toip==MyIPAddr || toip==IPAddress(IP_ADDRESS_BROADCAST)) {
 	  if (!(iph.IsChecksumCorrect())) {
-	    MinetSendToMonitor(MinetMonitoringEvent("Discarding packet because header checksum is wrong."));
 	    cerr << "Discarding following packet because header checksum is wrong: "<<p<<"\n";
 	    continue;
 	  }
@@ -96,67 +125,97 @@ int main(int argc, char *argv[])
 	  iph.GetFlags(flags);
 	  iph.GetFragOffset(fragoff);
 	  if ((flags&IP_HEADER_FLAG_MOREFRAG) || (fragoff!=0)) { 
-	    MinetSendToMonitor(MinetMonitoringEvent("Discarding packet because it is a fragment"));
 	    cerr << "Discarding following packet because it is a fragment: "<<p<<"\n";
 	    cerr << "NOTE: NO ICMP PACKET WAS SENT BACK\n";
 	    continue;
 	  }
+
 	  
-	  // Prints incoming RawEthernetPackets from the EthernetMux
-	  cerr << "Incoming RawEthernetPacket from EthernetMux:\n";
-	  
+	  Buffer payload = p.GetPayload();
+	  // Printing incoming RawEthernetPackets from the EtherMux
+	  cerr << "===========================================\n";
+	  cerr << "Incoming RawEthernetPackets from EtherMux: \n";	
+          cerr << "EthernetHeader: \n";
+	  cerr << eh << "\n";
+	  cerr << "IPHeader: \n";
+	  cerr << iph << "\n";
+	  cerr << "Data: \n";
+	  cerr << "===========================================\n";	  
+   
 #if IP_MUX
-	  MinetSend(ipmux,p);
+	  p.Serialize(toipmux);
 #else
 #endif
-	} else {
+	} 
+	else {
 	  // discarded due to different target address
 	}
       }
 #endif
 
 #if IP_MUX
-      if (event.handle==ipmux) {
+      if (FD_ISSET(fromipmux,&read_fds)) {
 	Packet p;
-	MinetReceive(ipmux,p);
+	p.Unserialize(fromipmux);
 	IPHeader iph = p.FindHeader(Headers::IPHeader);
 
 	// ROUTE
+        // Loading up the routing table
 
+
+        
 	IPAddress ipaddr;
 	iph.GetDestIP(ipaddr);
-
-	ARPRequestResponse req(ipaddr,
+	
+	if(ipaddr == IP_ADDRESS_LO) {
+	  cerr << "This packet has destination IP 127.0.0.1\n";
+	  cerr << "It's forwarded back up the stack\n";
+	  p.Serialize(toipmux);
+	}
+	
+	else {
+	  ARPRequestResponse req(ipaddr,
 			       EthernetAddr(ETHERNET_BLANK_ADDR),
 			       ARPRequestResponse::REQUEST);
-	ARPRequestResponse resp;
+ 	  ARPRequestResponse resp;
 
-	MinetSend(arp,req);
-	MinetReceive(arp,resp);
+	  req.Serialize(toarp);
+	  resp.Unserialize(fromarp);
 
-	if (resp.ethernetaddr!=ETHERNET_BLANK_ADDR) {
-	  resp.flag=ARPRequestResponse::RESPONSE_OK;
-	}
+	  if (resp.ethernetaddr!=ETHERNET_BLANK_ADDR) {
+	    resp.flag=ARPRequestResponse::RESPONSE_OK;
+	  }
 
-	if (resp.flag==ARPRequestResponse::RESPONSE_OK) {
-	  // set src and dest addrs in header
-	  // set protocol ip
+	  if (resp.flag==ARPRequestResponse::RESPONSE_OK) {
+	    // set src and dest addrs in header
+	    // set protocol ip
 
-	  EthernetHeader h;
-	  h.SetSrcAddr(MyEthernetAddr);
-	  h.SetDestAddr(resp.ethernetaddr);
-	  h.SetProtocolType(PROTO_IP);
-	  p.PushHeader(h);
-	  RawEthernetPacket e(p);
-	  MinetSend(ethermux,e);
-	} else {
-	  MinetSendToMonitor(MinetMonitoringEvent("Discarding packet because there is no arp entry"));
-	  cerr << "Discarded IP packet because there is no arp entry\n";
+	    EthernetHeader h;
+	    h.SetSrcAddr(MyEthernetAddr);
+	    h.SetDestAddr(resp.ethernetaddr);
+	    h.SetProtocolType(PROTO_IP);
+	    p.PushHeader(h);
+	    RawEthernetPacket e(p);
+	    e.Serialize(toethermux);
+
+	    Buffer payload = p.GetPayload();
+            // Printing outgoing RawEthernetPackets from the IPMux
+            cerr << "===========================================\n";
+            cerr << "Outgoing RawEthernetPackets from IPMux: \n";
+            cerr << "EthernetHeader: \n";
+            cerr << h << "\n";
+            cerr << "IPHeader: \n";
+            cerr << iph << "\n";
+            cerr << "Data: \n";
+            cerr << "===========================================\n";
+	  } 
+	  else {
+	    cerr << "Discarded IP packet because there is no arp entry\n";
+	  }
 	}
       }
 #endif
     }
   }
-  MinetDeinit();
   return 0;
 }

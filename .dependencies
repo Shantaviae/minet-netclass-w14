@@ -58,6 +58,7 @@ ethernet_mux.o: ethernet_mux.cc /usr/include/netinet/in.h debug.h \
 arp_module.o: arp_module.cc debug.h config.h arp.h \
  raw_ethernet_packet.h packet.h buffer.h util.h headertrailer.h \
  ethernet.h ip.h
+route.o: route.h route.cc
 ip_module.o: ip_module.cc config.h ip.h headertrailer.h buffer.h \
  util.h packet.h raw_ethernet_packet.h arp.h ethernet.h
 other_module.o: other_module.cc config.h packet.h buffer.h util.h \
