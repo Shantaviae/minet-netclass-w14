@@ -891,10 +891,10 @@ EXTERNC int minet_can_write_now (int sockfd) {
     return (-1);
     break;
   case KERNEL_SOCKS:
-    fd_set *write_fds;
-    FD_ZERO(write_fds);
-    FD_SET(sockfd, write_fds);
-    return (select(sockfd+1, NULL, write_fds, NULL, 0));
+    fd_set write_fds;
+    FD_ZERO(&write_fds);
+    FD_SET(sockfd, &write_fds);
+    return (select(sockfd+1, NULL, &write_fds, NULL, 0));
     break;
   case MINET_SOCKS: {
     SockLibRequestResponse slrr(mCAN_WRITE_NOW,
@@ -925,10 +925,10 @@ EXTERNC int minet_can_read_now (int sockfd) {
     return (-1);
     break;
   case KERNEL_SOCKS:
-    fd_set *read_fds;
-    FD_ZERO(read_fds);
-    FD_SET(sockfd, read_fds);
-    return (select(sockfd+1, read_fds, NULL, NULL, 0));
+    fd_set read_fds;
+    FD_ZERO(&read_fds);
+    FD_SET(sockfd, &read_fds);
+    return (select(sockfd+1, &read_fds, NULL, NULL, 0));
     break;
   case MINET_SOCKS: {
     SockLibRequestResponse slrr(mCAN_READ_NOW,
