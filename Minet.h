@@ -61,6 +61,7 @@ enum MinetDatatype {
   MINET_NONE,
   MINET_EVENT,
   MINET_MONITORINGEVENT,
+  MINET_MONITORINGEVENTDESC,
   MINET_RAWETHERNETPACKET,
   MINET_PACKET,
   MINET_ARPREQUESTRESPONSE,
@@ -118,15 +119,15 @@ int         MinetClose(const MinetHandle &mh);
 int         MinetGetNextEvent(MinetEvent &event, double timeout=-1);
 
 
-#define MINET_DECL(TYPE)					\
+#define MINET_DECL(TYPE)					        \
 int MinetSend(const MinetHandle &handle, const TYPE &object);	        \
-int MinetReceive(const MinetHandle &handle, const TYPE &object);        \
+int MinetReceive(const MinetHandle &handle, TYPE &object);        \
 int MinetMonitorSend(const MinetHandle &handle, const TYPE &object);	\
 int MinetMonitorReceive(const MinetHandle &handle, const TYPE &object); \
 
 
+
 MINET_DECL(MinetEvent)
-MINET_DECL(MinetMonitoringEvent)
 MINET_DECL(RawEthernetPacket)
 MINET_DECL(Packet)
 MINET_DECL(ARPRequestResponse)
@@ -136,6 +137,8 @@ MINET_DECL(SockLibRequestResponse)
 #include "Monitor.h"
 
 int MinetSendToMonitor(const MinetMonitoringEvent &object);
+MINET_DECL(MinetMonitoringEvent)
+MINET_DECL(MinetMonitoringEventDescription)
 
 
 #endif
