@@ -22,7 +22,8 @@
 #include "debug.h"
 
 
-EthernetAddr MyEthernetAddr(getenv("MINET_ETHERNETADDR"));
+EthernetAddr MyEthernetAddr(getenv("MINET_ETHERNETADDR") ? 
+			    getenv("MINET_ETHERNETADDR") : (char*)Die("MINET_ETHERNETADDR is not set!"));
 
 int ethernet_reader_pair[2];
 int ethernet_reader_fd;

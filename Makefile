@@ -117,8 +117,8 @@ reader.o : reader.cc
 writer.o : writer.cc
 	$(CXX) $(WRITERCXXFLAGS) -c $< -o $(@F)
 
-ip_module:
-	cp /home1/pdinda/netclass-execs/ip_module ip_module 
+#ip_module:
+#	cp /home1/pdinda/netclass-execs/ip_module ip_module 
 
 depend:
 	$(CXX) $(CXXFLAGS) $(READERCXXFLAGS) $(WRITERCXXFLAGS)  -MM $(OBJS:.o=.cc) > .dependencies

@@ -5,8 +5,10 @@
 #include <arpa/inet.h>
 
 #include "util.h"
+#include "error.h"
 
-IPAddress MyIPAddr(getenv("MINET_IPADDR"));
+IPAddress MyIPAddr(getenv("MINET_IPADDR") ? 
+		   getenv("MINET_IPADDR") : (char*)Die("MINET_IPADDR is not set!"));
 
 
 IPAddress::IPAddress() :addr(0)

@@ -46,7 +46,12 @@ EXECOBJS_EXCEPT_READER_WRITER =                 \
            tcp_client.o                         \
            tcp_server.o                         \
            sock_test_app.o                      \
-           sock_test_tcp.o
+           sock_test_tcp.o                      \
+           test_reader.o                        \
+           test_writer.o                        \
+           test_arp.o                           \
+           test_raw_ethernet_packet_buffer.o    \
+
 
 READER_WRITER_EXECOBJS=reader.o writer.o
 
@@ -112,6 +117,8 @@ reader.o : reader.cc
 writer.o : writer.cc
 	$(CXX) $(WRITERCXXFLAGS) -c $< -o $(@F)
 
+ip_module:
+	cp /home1/pdinda/netclass-execs/ip_module ip_module 
 
 depend:
 	$(CXX) $(CXXFLAGS) $(READERCXXFLAGS) $(WRITERCXXFLAGS)  -MM $(OBJS:.o=.cc) > .dependencies
