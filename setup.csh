@@ -50,48 +50,20 @@ endif
     mkfifo fifos/app2sock
     mkfifo fifos/sock2app
 
-
-    mkfifo fifos/ether2mux_shim
-    mkfifo fifos/mux2ether_shim
-    
-    mkfifo fifos/mux2arp_shim
-    mkfifo fifos/arp2mux_shim
-    
-    mkfifo fifos/mux2ip_shim
-    mkfifo fifos/ip2mux_shim
-    
-    mkfifo fifos/mux2other_shim
-    mkfifo fifos/other2mux_shim
-    
-    mkfifo fifos/ip2arp_shim
-    mkfifo fifos/arp2ip_shim
-    
-    mkfifo fifos/ip2ipmux_shim
-    mkfifo fifos/ipmux2ip_shim
-    
-    mkfifo fifos/udp2ipmux_shim
-    mkfifo fifos/ipmux2udp_shim
-
-    mkfifo fifos/tcp2ipmux_shim
-    mkfifo fifos/ipmux2tcp_shim
-
-    mkfifo fifos/icmp2ipmux_shim
-    mkfifo fifos/ipmux2icmp_shim
-
-    mkfifo fifos/other2ipmux_shim
-    mkfifo fifos/ipmux2other_shim
-
-    mkfifo fifos/udp2sock_shim
-    mkfifo fifos/sock2udp_shim
-
-    mkfifo fifos/tcp2sock_shim
-    mkfifo fifos/sock2tcp_shim
-
-    mkfifo fifos/icmp2sock_shim
-    mkfifo fifos/sock2icmp_shim
-
-    mkfifo fifos/app2sock_shim
-    mkfifo fifos/sock2app_shim
+    mkfifo fifos/reader2mon
+    mkfifo fifos/writer2mon
+    mkfifo fifos/ether2mon
+    mkfifo fifos/ethermux2mon
+    mkfifo fifos/arp2mon
+    mkfifo fifos/ip2mon
+    mkfifo fifos/other2mon
+    mkfifo fifos/ipmux2mon
+    mkfifo fifos/udp2mon
+    mkfifo fifos/tcp2mon
+    mkfifo fifos/icmp2mon
+    mkfifo fifos/sock2mon
+    mkfifo fifos/socklib2mon
+    mkfifo fifos/app2mon
 
     echo "Done!"
 
@@ -106,7 +78,7 @@ setenv MINET_WRITERBUFFER "100"
 setenv MINET_DEBUGLEVEL "0"
 # log xterm gdb
 setenv MINET_DISPLAY xterm
-setenv MINET_SHIMS  "ip_mux+udp_module;udp_module+sock_module;ip_mux+tcp_module;tcp_module+sock_module"
+# setenv MINET_SHIMS  "ip_mux+udp_module;udp_module+sock_module;ip_mux+tcp_module;tcp_module+sock_module"
 
 setenv MINET_MSS 256
 setenv MINET_MTU 500

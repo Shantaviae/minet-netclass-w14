@@ -73,8 +73,33 @@ const char sock2tcp_fifo_name[]="./fifos/sock2tcp";
 const char icmp2sock_fifo_name[]="./fifos/icmp2sock";
 const char sock2icmp_fifo_name[]="./fifos/sock2icmp";
 
+const char ipother2sock_fifo_name[]="./fifos/ipother2sock";
+const char sock2ipother_fifo_name[]="./fifos/sock2ipother";
+
+const char other2sock_fifo_name[]="./fifos/other2sock";
+const char sock2other_fifo_name[]="./fifos/sock2other";
+
 const char app2sock_fifo_name[]="./fifos/app2sock";
 const char sock2app_fifo_name[]="./fifos/sock2app";
+
+const char sock2socklib_fifo_name[]="./fifos/sock2socklib";
+const char socklib2sock_fifo_name[]="./fifos/socklib2sock";
+
+const char reader2mon_fifo_name[]="./fifos/reader2mon";
+const char writer2mon_fifo_name[]="./fifos/writer2mon";
+const char ether2mon_fifo_name[]="./fifos/ether2mon";
+const char ethermux2mon_fifo_name[]="./fifos/ethermux2mon";
+const char arp2mon_fifo_name[]="./fifos/arp2mon";
+const char ip2mon_fifo_name[]="./fifos/ip2mon";
+const char other2mon_fifo_name[]="./fifos/other2mon";
+const char ipmux2mon_fifo_name[]="./fifos/ipmux2mon";
+const char udp2mon_fifo_name[]="./fifos/udp2mon";
+const char tcp2mon_fifo_name[]="./fifos/tcp2mon";
+const char icmp2mon_fifo_name[]="./fifos/icmp2mon";
+const char sock2mon_fifo_name[]="./fifos/sock2mon";
+const char socklib2mon_fifo_name[]="./fifos/socklib2mon";
+const char app2mon_fifo_name[]="./fifos/app2mon";
+
 
 // shims
 // the rule with shims is that the upper module to shim connection

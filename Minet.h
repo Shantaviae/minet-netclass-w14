@@ -1,6 +1,7 @@
 #ifndef _Minet
 #define _Minet
 
+#include <iostream>
 
 typedef int MinetHandle;
 
@@ -25,22 +26,46 @@ enum MinetModule {
 };
 
 
+
+enum MinetDatatype {
+  MINET_NONE,
+  MINET_EVENT,
+  MINET_MONITORINGEVENT,
+  MINET_RAWETHERNETPACKET,
+  MINET_PACKET,
+  MINET_SOCKREQUESTRESPONSE,
+  MINET_SOCKLIBREQUESTRESPONSE,
+};
+
+ostream & operator<<(ostream &os, const MinetModule &mon);
+ostream & operator<<(ostream &os, const MinetDatatype &t);
+
+
 struct MinetEvent {
-   enum {Dataflow, Exception, Timeout, Error }          eventtype;
-   enum {IN, OUT, INOUT, NONE}                          direction; 
-   int                                                  handle;
-   int                                                  errno;
-   double                                               overtime;
+  enum {Dataflow, Exception, Timeout, Error }          eventtype;
+  enum {IN, OUT, INOUT, NONE}                          direction; 
+  MinetHandle                                          handle;
+  int                                                  error;
+  double                                               overtime;
+
+  MinetEvent();
+  MinetEvent(const MinetEvent &rhs);
+  virtual ~MinetEvent();
+
+  virtual const MinetEvent & operator= (const MinetEvent &rhs);
+
+  virtual void Serialize(const int fd) const;
+  virtual void Unserialize(const int fd);
+
+  virtual ostream & Print(ostream &os) const;
 };
 
 
 int         MinetInit(const MinetModule &mod);
 int         MinetDeinit();
 
-MinetHandle MinetConnect(const MinetModule &mod, 
-                         const MinetModule &connectas=MINET_DEFAULT);
-MinetHandle MinetAccept(const MinetModule &mod, 
-                        bool  await=false);  
+MinetHandle MinetConnect(const MinetModule &mod);
+MinetHandle MinetAccept(const MinetModule &mod);
 int         MinetClose(const MinetHandle &mh);
 
 MinetEvent &MinetGetNextEvent(double timeout=-1);
@@ -51,3 +76,4 @@ int MinetSend(const MinetHandle &handle, const T &object);
 template <class T> 
 int MinetReceive(const MinetHandle &handle, T &object);
 
+#endif

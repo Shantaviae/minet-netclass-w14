@@ -5,6 +5,8 @@ LIBMINET = libminet.a
 LIBMINET_SOCK_OBJS = minet_socket.o
 
 LIBMINET_OBJS  = \
+           Minet.o                              \
+           Monitor.o                            \
            config.o 				\
            buffer.o 				\
            error.o 				\
@@ -34,10 +36,6 @@ EXECOBJS_EXCEPT_READER_WRITER =                 \
            udp_module.o                         \
            tcp_module.o                         \
            app.o				\
-           shim_udp_sock.o                      \
-           shim_tcp_sock.o                      \
-           shim_ipmux_udp.o                     \
-           shim_ipmux_tcp.o                     \
            sock_module.o                        \
            udp_client.o                         \
            udp_server.o                         \
