@@ -17,7 +17,10 @@ int readall(const int fd, char *buf, const int len, const int oneshot, const int
     if (oneshot) { 
       return rc;
     }
-    if (rc<=0) { 
+    if (rc==0) {
+      return len-left;
+    }
+    if (rc<0) { 
       if (errno==EINTR) {
 	continue;
       }
@@ -44,7 +47,10 @@ int writeall(const int fd, const char *buf, const int len, const int oneshot, co
     if (oneshot) { 
       return rc;
     }
-    if (rc<=0) { 
+    if (rc==0) { 
+      return len-left;
+    }
+    if (rc<0) { 
       if (errno==EINTR) {
 	continue;
       }
