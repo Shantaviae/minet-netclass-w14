@@ -4,6 +4,10 @@
 #
 
 case $MINET_DISPLAY in
+    none)
+	./$* 1> /dev/null 2> /dev/null &
+	echo $! >> pids
+    ;;
     log)
 	./$* 1> $1.stdout.log 2> $1.stderr.log &
 	echo $! >> pids
