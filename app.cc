@@ -5,7 +5,7 @@
 
 int main()
 {
-  MinetInit(MINET_APP);
+  MinetInit(MINET_SOCKLIB_MODULE);
   MinetConnect(MINET_SOCK_MODULE);
   while (1) {
     cerr << "la ";

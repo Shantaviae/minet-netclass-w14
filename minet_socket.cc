@@ -1,9 +1,7 @@
 #include <fcntl.h>
 
+#include "Minet.h"
 #include "minet_socket.h"
-#include "config.h"
-#include "sockint.h"
-#include "ip.h"
 
 #define UNINIT_SOCKS 0
 #define KERNEL_SOCKS 1
@@ -18,7 +16,7 @@
 
 
 int socket_type = 0;
-int fromsock, tosock;
+MinetHandle sock;
 int minet_errno = EOK;
 
 
@@ -27,8 +25,14 @@ EXTERNC int minet_init (minet_socket_types type) {
     socket_type = KERNEL_SOCKS;
   else {
     socket_type = MINET_SOCKS;
-    fromsock = open(sock2app_fifo_name, O_RDONLY);
-    tosock = open (app2sock_fifo_name, O_WRONLY);
+    MinetInit(MINET_SOCKLIB_MODULE);
+    sock = MinetIsModuleInConfig(MINET_SOCK_MODULE) ? MinetConnect(MINET_SOCK_MODULE) : MINET_NOHANDLE;
+    if (sock==MINET_NOHANDLE && MinetIsModuleInConfig(MINET_SOCK_MODULE)) { 
+      MinetSendToMonitor(MinetMonitoringEvent("Can't connect to sock_module"));
+      socket_type=UNINIT_SOCKS;
+      return socket_type;
+    }
+    MinetSendToMonitor(MinetMonitoringEvent("socklib up"));
   }
   return (socket_type);
 }
@@ -36,8 +40,7 @@ EXTERNC int minet_init (minet_socket_types type) {
 
 EXTERNC int minet_deinit () {
   if (socket_type == MINET_SOCKS) {
-    close(fromsock);
-    close(tosock);
+    MinetDeinit();
   }
   socket_type = UNINIT_SOCKS;
   return (socket_type);
@@ -144,8 +147,8 @@ EXTERNC int minet_socket (int type) {
 				    0, 0);
       break;
     }
-    slrr.Serialize (tosock);
-    slrr.Unserialize (fromsock);
+    MinetSend(sock,slrr);
+    MinetReceive(sock,slrr);
     minet_errno = slrr.error;
     if (minet_errno != EOK)
       return (-1);
@@ -173,8 +176,8 @@ EXTERNC int minet_bind (int sockfd, struct sockaddr_in *myaddr) {
 				Buffer(),
 				0, 0);
     //    cerr << slrr << endl;
-    slrr.Serialize (tosock);
-    slrr.Unserialize (fromsock);
+    MinetSend(sock,slrr);
+    MinetReceive(sock,slrr);
     minet_errno = slrr.error;
     if (minet_errno != EOK)
       return (-1);
@@ -196,8 +199,8 @@ EXTERNC int minet_listen (int sockfd, int backlog) {
 				sockfd,
 				Buffer(),
 				0, 0);
-    slrr.Serialize (tosock);
-    slrr.Unserialize (fromsock);
+    MinetSend(sock,slrr);
+    MinetReceive(sock,slrr);
     minet_errno = slrr.error;
     if (minet_errno != EOK)
       return (-1);
@@ -228,8 +231,8 @@ EXTERNC int minet_accept (int sockfd, struct sockaddr_in *addr) {
 				sockfd,
 				Buffer(),
 				0, 0);
-    slrr.Serialize (tosock);
-    slrr.Unserialize (fromsock);
+    MinetSend(sock,slrr);
+    MinetReceive(sock,slrr);
     minet_errno = slrr.error;
     if (minet_errno != EOK)
       return (-1);
@@ -259,8 +262,8 @@ EXTERNC int minet_connect (int sockfd, struct sockaddr_in *addr) {
 				sockfd,
 				Buffer(),
 				0, 0);
-    slrr.Serialize (tosock);
-    slrr.Unserialize (fromsock);
+    MinetSend(sock,slrr);
+    MinetReceive(sock,slrr);
     minet_errno = slrr.error;
     if (minet_errno != EOK) {
       return (-1);
@@ -285,8 +288,8 @@ EXTERNC int minet_read (int fd, char *buf, int len) {
 				fd,
 				Buffer(buf, len),
 				0, 0);
-    slrr.Serialize (tosock);
-    slrr.Unserialize (fromsock);
+    MinetSend(sock,slrr);
+    MinetReceive(sock,slrr);
     minet_errno = slrr.error;
     if (minet_errno != EOK)
       return (-1);
@@ -313,8 +316,8 @@ EXTERNC int minet_write (int fd, char *buf, int len) {
 				fd,
 				Buffer(buf, len),
 				0, 0);
-    slrr.Serialize (tosock);
-    slrr.Unserialize (fromsock);
+    MinetSend(sock,slrr);
+    MinetReceive(sock,slrr);
     minet_errno = slrr.error;
     if (minet_errno != EOK)
       return (-1);
@@ -346,8 +349,8 @@ EXTERNC int minet_recvfrom (int fd, char *buf, int len,
 				fd,
 				Buffer(buf, len),
 				0, 0);
-    slrr.Serialize (tosock);
-    slrr.Unserialize (fromsock);
+    MinetSend(sock,slrr);
+    MinetReceive(sock,slrr);
     minet_errno = slrr.error;
     if (minet_errno != EOK)
       return (-1);
@@ -378,8 +381,8 @@ EXTERNC int minet_sendto (int fd, char *buf, int len,
 				fd,
 				Buffer(buf, len),
 				0, 0);
-    slrr.Serialize (tosock);
-    slrr.Unserialize (fromsock);
+    MinetSend(sock,slrr);
+    MinetReceive(sock,slrr);
     minet_errno = slrr.error;
     if (minet_errno != EOK)
       return (-1);
@@ -403,8 +406,8 @@ EXTERNC int minet_close (int sockfd) {
 				sockfd,
 				Buffer(),
 				0, 0);
-    slrr.Serialize (tosock);
-    slrr.Unserialize (fromsock);
+    MinetSend(sock,slrr);
+    MinetReceive(sock,slrr);
     minet_errno = slrr.error;
     if (minet_errno != EOK)
       return (-1);
@@ -412,7 +415,12 @@ EXTERNC int minet_close (int sockfd) {
   }
 }
 
+#define SELECTPOLL_BROKEN 1
 
+/*
+  This is PAD:  I don't understand what this thing is trying to do
+  Why is it re-opening the minet fifos?
+*/
 EXTERNC int minet_select (int             minet_maxfd,
 			  fd_set         *minet_read_fds,
 			  fd_set         *minet_write_fds,
@@ -428,11 +436,15 @@ EXTERNC int minet_select (int             minet_maxfd,
 		    minet_except_fds, timeout));
     break;
   case MINET_SOCKS:
+#if SELECTPOLL_BROKEN
+    return ENOT_IMPLEMENTED;
+#else
     fd_set minet_read_fifos, minet_write_fifos, minet_except_fifos;
     FD_ZERO(&minet_read_fifos); 
     FD_ZERO(&minet_write_fifos); 
     FD_ZERO(&minet_except_fifos);
-    for (int fd=0; fd<minet_maxfd+1; fd++)
+    for (int fd=0; fd<minet_maxfd+1; fd++) {
+#if 0
       if(FD_ISSET(fd, minet_read_fds)) {
 	fd = open(sock2app_fifo_name, O_RDONLY);
 	FD_SET(fd, &minet_read_fifos);
@@ -445,8 +457,23 @@ EXTERNC int minet_select (int             minet_maxfd,
 	fd = open(app2sock_fifo_name, O_WRONLY);
 	FD_SET(fd, &minet_except_fifos);
       };
-    int numfds = select(minet_maxfd, &minet_read_fifos, &minet_write_fifos, 
-			&minet_except_fifos, timeout);
+#else
+      if(FD_ISSET(fd, minet_read_fds)) {
+	FD_SET(fd, &minet_read_fifos);
+      }
+      else if(FD_ISSET(fd, minet_write_fds)) {
+	FD_SET(fd, &minet_write_fifos);
+      }
+      else if(FD_ISSET(fd, minet_except_fds)) {
+	FD_SET(fd, &minet_except_fifos);
+      };
+#endif
+    }
+      
+    // eh? - PAD
+    //int numfds = select(minet_maxfd, &minet_read_fifos, &minet_write_fifos, 
+    //&minet_except_fifos, timeout);
+    
     SockLibRequestResponse slrr;
     if (numfds) {
       slrr = SockLibRequestResponse(mSELECT,
@@ -459,8 +486,8 @@ EXTERNC int minet_select (int             minet_maxfd,
 				    minet_write_fifos,
 				    minet_except_fifos);
       
-      slrr.Serialize (tosock);
-      slrr.Unserialize (fromsock);
+      MinetSend(sock,slrr);
+      MinetReceive(sock,slrr);
     } else {
       slrr = SockLibRequestResponse(mSELECT,
 				    Connection(),
@@ -472,15 +499,19 @@ EXTERNC int minet_select (int             minet_maxfd,
 				    minet_write_fifos,
 				    minet_except_fifos);
       
-      slrr.Serialize (tosock);
-      slrr.Unserialize (fromsock);
+      MinetSend(sock,slrr);
+      MinetReceive(sock,slrr);
     }
+
+
     int ctr=0;
-    for(int j=0; j<minet_maxfd+1; j++)
+    for(int j=0; j<minet_maxfd+1; j++) {
       if(FD_ISSET(j, &minet_read_fifos)) ctr++;
       else if(FD_ISSET(j, &minet_write_fifos)) ctr++;
       else if(FD_ISSET(j, &minet_except_fifos)) ctr++;
+    }
     return (ctr);
+#endif
     break;
   }
 }
@@ -501,17 +532,26 @@ EXTERNC int minet_select_ex (int             minet_maxfd,
     return (-1);
     break;
   case KERNEL_SOCKS:
+#if SELECTPOLL_BROKEN
+    return ENOT_IMPLEMENTED;
+#else
+    // NO, this is WRONG
     return (select(minet_maxfd, minet_read_fds, minet_write_fds, 
 		   minet_except_fds, timeout) ||
 	    select(unix_maxfd, unix_read_fds, unix_write_fds,
 		   unix_except_fds, timeout));
+#endif
     break;
   case MINET_SOCKS:
+#if SELECTPOLL_BROKEN
+    return ENOT_IMPLEMENTED;
+#else
     fd_set minet_read_fifos, minet_write_fifos, minet_except_fifos;
     FD_ZERO(&minet_read_fifos); 
     FD_ZERO(&minet_write_fifos); 
     FD_ZERO(&minet_except_fifos);
-    for (int fd=0; fd<minet_maxfd+1; fd++)
+    for (int fd=0; fd<minet_maxfd+1; fd++) {
+#if 0
       if(FD_ISSET(fd, minet_read_fds)) {
 	fd = open(sock2app_fifo_name, O_RDONLY);
 	FD_SET(fd, &minet_read_fifos);
@@ -524,8 +564,20 @@ EXTERNC int minet_select_ex (int             minet_maxfd,
 	fd = open(app2sock_fifo_name, O_WRONLY);
 	FD_SET(fd, &minet_except_fifos);
       };
-    int numfds = select(minet_maxfd, &minet_read_fifos, &minet_write_fifos, 
-			&minet_except_fifos, timeout);
+#else
+      if(FD_ISSET(fd, minet_read_fds)) {
+	FD_SET(fd, &minet_read_fifos);
+      }
+      else if(FD_ISSET(fd, minet_write_fds)) {
+	FD_SET(fd, &minet_write_fifos);
+      }
+      else if(FD_ISSET(fd, minet_except_fds)) {
+	FD_SET(fd, &minet_except_fifos);
+      };
+#endif
+    }
+    //int numfds = select(minet_maxfd, &minet_read_fifos, &minet_write_fifos, 
+    //&minet_except_fifos, timeout);
     SockLibRequestResponse slrr;
     if (numfds) {
       slrr = SockLibRequestResponse(mSELECT,
@@ -538,8 +590,8 @@ EXTERNC int minet_select_ex (int             minet_maxfd,
 				    minet_write_fifos,
 				    minet_except_fifos);
       
-      slrr.Serialize (tosock);
-      slrr.Unserialize (fromsock);
+      MinetSend(sock,slrr);
+      MinetReceive(sock,slrr);
     } else {
       slrr = SockLibRequestResponse(mSELECT,
 				    Connection(),
@@ -551,17 +603,22 @@ EXTERNC int minet_select_ex (int             minet_maxfd,
 				    minet_write_fifos,
 				    minet_except_fifos);
       
-      slrr.Serialize (tosock);
-      slrr.Unserialize (fromsock);
+      MinetSend(sock,slrr);
+      MinetReceive(sock,slrr);
     }
     int ctr=0;
-    for(int j=0; j<minet_maxfd+1; j++)
+    for(int j=0; j<minet_maxfd+1; j++) {
       if(FD_ISSET(j, &minet_read_fifos)) ctr++;
       else if(FD_ISSET(j, &minet_write_fifos)) ctr++;
       else if(FD_ISSET(j, &minet_except_fifos)) ctr++;
-    return (ctr ||
-	    select(unix_maxfd, unix_read_fds, unix_write_fds,
-		   unix_except_fds, timeout));
+    }
+    return ctr;
+
+    // NO NO NO NO
+    //    return (ctr ||
+    //    select(unix_maxfd, unix_read_fds, unix_write_fds,
+    //	   unix_except_fds, timeout));
+#endif
     break;
   }
 }
@@ -579,6 +636,9 @@ EXTERNC int minet_poll (struct pollfd *minet_fds,
     return (poll (minet_fds, num_minet_fds, timeout));
     break;
   case MINET_SOCKS:
+#if SELECTPOLL_BROKEN
+    return ENOT_IMPLEMENTED;
+#else
     struct pollfd *minet_fifos = (struct pollfd*)malloc(num_minet_fds * 
 							sizeof(struct pollfd));
     for(int i=0; i<num_minet_fds; i++) {
@@ -604,6 +664,7 @@ EXTERNC int minet_poll (struct pollfd *minet_fds,
       return (ctr);
     }
     return (revnts);
+#endif
     break;
   }
 }
@@ -623,6 +684,10 @@ EXTERNC int minet_poll_ex (struct pollfd *minet_fds,
     return (poll (minet_fds, num_minet_fds, timeout));
     break;
   case MINET_SOCKS:
+#if SELECTPOLL_BROKEN
+    return ENOT_IMPLEMENTED;
+#else
+
     struct pollfd *minet_fifos = (struct pollfd*)malloc(num_minet_fds * 
 							sizeof(struct pollfd));
     for(int i=0; i<num_minet_fds; i++) {
@@ -650,6 +715,7 @@ EXTERNC int minet_poll_ex (struct pollfd *minet_fds,
     }
     return (revnts ||
 	    poll(unix_fds, num_unix_fds, timeout));
+#endif
     break;
   }
 }
@@ -675,8 +741,8 @@ EXTERNC int minet_set_nonblocking (int sockfd) {
 				sockfd,
 				Buffer(),
 				0, 0);
-    slrr.Serialize (tosock);
-    slrr.Unserialize (fromsock);
+    MinetSend(sock,slrr);
+    MinetReceive(sock,slrr);
     minet_errno = slrr.error;
     if (minet_errno != EOK)
       return (-1);
@@ -705,8 +771,8 @@ EXTERNC int minet_set_blocking (int sockfd) {
 				sockfd,
 				Buffer(),
 				0, 0);
-    slrr.Serialize (tosock);
-    slrr.Unserialize (fromsock);
+    MinetSend(sock,slrr);
+    MinetReceive(sock,slrr);
     minet_errno = slrr.error;
     if (minet_errno != EOK)
       return (-1);
@@ -733,8 +799,8 @@ EXTERNC int minet_can_write_now (int sockfd) {
 				sockfd,
 				Buffer(),
 				0, 0);
-    slrr.Serialize (tosock);
-    slrr.Unserialize (fromsock);
+    MinetSend(sock,slrr);
+    MinetReceive(sock,slrr);
     minet_errno = slrr.error;
     if (minet_errno != EOK)
       return (-1);
@@ -761,8 +827,8 @@ EXTERNC int minet_can_read_now (int sockfd) {
 				sockfd,
 				Buffer(),
 				0, 0);
-    slrr.Serialize (tosock);
-    slrr.Unserialize (fromsock);
+    MinetSend(sock,slrr);
+    MinetReceive(sock,slrr);
     minet_errno = slrr.error;
     if (minet_errno != EOK)
       return (-1);
