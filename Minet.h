@@ -137,6 +137,8 @@ MINET_DECL(SockLibRequestResponse)
 #include "Monitor.h"
 
 int MinetSendToMonitor(const MinetMonitoringEvent &object);
+int MinetSendToMonitor(const MinetMonitoringEventDescription &desc, const MinetMonitoringEvent &object=MinetMonitoringEvent("no further data"));
+
 MINET_DECL(MinetMonitoringEvent)
 MINET_DECL(MinetMonitoringEventDescription)
 

@@ -255,49 +255,49 @@ int         MinetInit(const MinetModule &mod)
     case MINET_MONITOR:
       break;
     case MINET_READER:
-      mf=strstr("reader",env) ? reader2mon_fifo_name : 0;
+      mf=strstr(env,"reader") ? reader2mon_fifo_name : 0;
       break;
     case MINET_WRITER:
-      mf=strstr("writer",env) ? writer2mon_fifo_name : 0;
+      mf=strstr(env,"writer") ? writer2mon_fifo_name : 0;
       break;
     case MINET_DEVICE_DRIVER:
-      mf=strstr("device_driver",env) ? ether2mon_fifo_name : 0;
+      mf=strstr(env,"device_driver") ? ether2mon_fifo_name : 0;
       break;
     case MINET_ETHERNET_MUX:
-      mf=strstr("ethernet_mux",env) ? ethermux2mon_fifo_name : 0;
+      mf=strstr(env,"ethernet_mux") ? ethermux2mon_fifo_name : 0;
       break;
     case MINET_IP_MODULE:
-      mf=strstr("ip_module",env) ? ip2mon_fifo_name : 0;
+      mf=strstr(env,"ip_module") ? ip2mon_fifo_name : 0;
       break;
     case MINET_ARP_MODULE:
-      mf=strstr("arp_module",env) ? arp2mon_fifo_name : 0;
+      mf=strstr(env,"arp_module") ? arp2mon_fifo_name : 0;
       break;
     case MINET_OTHER_MODULE:
-      mf=strstr("other_module",env) ? other2mon_fifo_name : 0;
+      mf=strstr(env,"other_module") ? other2mon_fifo_name : 0;
       break;
     case MINET_IP_MUX:
-      mf=strstr("ip_mux",env) ? ipmux2mon_fifo_name : 0;
+      mf=strstr(env,"ip_mux") ? ipmux2mon_fifo_name : 0;
       break;
     case MINET_IP_OTHER_MODULE:
-      mf=strstr("ip_other_module",env) ? ipother2mon_fifo_name : 0;
+      mf=strstr(env,"ip_other_module") ? ipother2mon_fifo_name : 0;
       break;
     case MINET_ICMP_MODULE:
-      mf=strstr("icmp_module",env) ? icmp2mon_fifo_name : 0;
+      mf=strstr(env,"icmp_module") ? icmp2mon_fifo_name : 0;
       break;
     case MINET_UDP_MODULE:
-      mf=strstr("udp_module",env) ? udp2mon_fifo_name : 0;
+      mf=strstr(env,"udp_module") ? udp2mon_fifo_name : 0;
       break;
     case MINET_TCP_MODULE:
-      mf=strstr("tcp_module",env) ? tcp2mon_fifo_name : 0;
+      mf=strstr(env,"tcp_module") ? tcp2mon_fifo_name : 0;
       break;
     case MINET_SOCK_MODULE:
-      mf=strstr("sock_module",env) ? sock2mon_fifo_name : 0;
+      mf=strstr(env,"sock_module") ? sock2mon_fifo_name : 0;
       break;
     case MINET_SOCKLIB_MODULE:
-      mf=strstr("socklib_module",env) ? socklib2mon_fifo_name : 0;
+      mf=strstr(env,"socklib_module") ? socklib2mon_fifo_name : 0;
       break;
     case MINET_APP:
-      mf=strstr("app",env) ? app2mon_fifo_name : 0;
+      mf=strstr(env,"app") ? app2mon_fifo_name : 0;
       break;
     case MINET_DEFAULT:
     default:
@@ -312,8 +312,17 @@ int         MinetInit(const MinetModule &mod)
     }
   }
 #endif
+  
+  MinetMonitoringEventDescription desc;
 
-  MinetSendToMonitor(MinetMonitoringEvent("Module Initialized"));
+  desc.timestamp=Time();
+  desc.source=MyModuleType;
+  desc.from=MyModuleType;
+  desc.to=MyModuleType;
+  desc.datatype=MINET_MONITORINGEVENT;
+  desc.optype=MINET_INIT;
+
+  MinetSendToMonitor(desc);
   
   return 0;
 }
@@ -324,7 +333,17 @@ int         MinetDeinit()
   MyModuleType=MINET_DEFAULT;
   MyFifos.clear();
   MyNextHandle=0;
-  MinetSendToMonitor(MinetMonitoringEvent("Module Deinitialized"));
+
+  MinetMonitoringEventDescription desc;
+
+  desc.timestamp=Time();
+  desc.from=MyModuleType;
+  desc.to=MyModuleType;
+  desc.datatype=MINET_MONITORINGEVENT;
+  desc.optype=MINET_DEINIT;
+
+  MinetSendToMonitor(desc);
+
   if (MyMonitorFifo>0) { 
     close(MyMonitorFifo);
     MyMonitorFifo=-1;
@@ -516,13 +535,21 @@ MinetHandle MinetConnect(const MinetModule &mod)
   con.handle=MinetGetNextHandle();
   con.module=mod;
 
-  con.to = fifoto!=0 ? open(fifoto,O_WRONLY) : -1;
   con.from = fifofrom!=0 ? open(fifofrom,O_RDONLY) : -1;
+  con.to = fifoto!=0 ? open(fifoto,O_WRONLY) : -1;
 
   MyFifos.push_back(con);
 
-  MinetSendToMonitor(MinetMonitoringEvent("Module connected"));
+  MinetMonitoringEventDescription desc;
 
+  desc.timestamp=Time();
+  desc.source=MyModuleType;
+  desc.from=MyModuleType;
+  desc.to=mod;
+  desc.datatype=MINET_MONITORINGEVENT;
+  desc.optype=MINET_CONNECT;
+
+  MinetSendToMonitor(desc);
 
   return con.handle;
 }
@@ -754,12 +781,21 @@ MinetHandle MinetAccept(const MinetModule &mod)
   con.handle=MinetGetNextHandle();
   con.module=mod;
 
-  con.from= fifofrom!=0 ? open(fifofrom,O_RDONLY) : -1 ;
   con.to= fifoto !=0 ? open(fifoto,O_WRONLY) : -1;
+  con.from= fifofrom!=0 ? open(fifofrom,O_RDONLY) : -1 ;
 
   MyFifos.push_back(con);
 
-  MinetSendToMonitor(MinetMonitoringEvent("Module accepted"));
+  MinetMonitoringEventDescription desc;
+
+  desc.timestamp=Time();
+  desc.source=MyModuleType;
+  desc.from=mod;
+  desc.to=MyModuleType;
+  desc.datatype=MINET_MONITORINGEVENT;
+  desc.optype=MINET_DEINIT;
+
+  MinetSendToMonitor(desc);
 
   return con.handle;
 }
@@ -768,13 +804,24 @@ MinetHandle MinetAccept(const MinetModule &mod)
 
 int         MinetClose(const MinetHandle &mh)
 {
+  MinetModule mod;
   Fifos::iterator x=MyFifos.FindMatching(mh);
   if (x!=MyFifos.end()) { 
     close((*x).from);
     close((*x).to);
+    mod=(*x).module;
     MyFifos.erase(x);
   }
-  MinetSendToMonitor(MinetMonitoringEvent("Module closed"));
+  MinetMonitoringEventDescription desc;
+
+  desc.timestamp=Time();
+  desc.source=MyModuleType;
+  desc.from=MyModuleType;
+  desc.to=mod;
+  desc.datatype=MINET_MONITORINGEVENT;
+  desc.optype=MINET_DEINIT;
+
+  MinetSendToMonitor(desc);
   return 0;
 }
 					  
@@ -832,8 +879,19 @@ int MinetGetNextEvent(MinetEvent &event, double timeout=-1)
 	  event.handle=(*i).handle;
 	  event.error=0;
 	  event.overtime=0.0;
+
+	  MinetMonitoringEventDescription desc;
+	  
+	  desc.timestamp=Time();
+	  desc.source=MyModuleType;
+	  desc.from=(*i).module;
+	  desc.to=MyModuleType;
+	  desc.datatype=MINET_MONITORINGEVENT;
+	  desc.optype=MINET_GETNEXTEVENT;
+	  
+	  MinetSendToMonitor(desc);
+
 	  return 0;
-	  MinetSendToMonitor(MinetMonitoringEvent("MinetGetNextEvent returning with IN"));
 	}
       }
     }
@@ -851,9 +909,11 @@ int MinetMonitorSend(const MinetHandle &handle, const TYPE &obj)	\
     } else {								\
       MinetMonitoringEventDescription desc;				\
       desc.timestamp=(double)Time();					\
+      desc.source=MyModuleType;                                         \
       desc.from=MyModuleType;						\
       desc.to=(*fifo).module;						\
       desc.datatype = MINETTYPE;					\
+      desc.optype= MINET_SEND;                                          \
       desc.Serialize(MyMonitorFifo);					\
       obj.Serialize(MyMonitorFifo);					\
     }									\
@@ -871,9 +931,11 @@ int MinetMonitorReceive(const MinetHandle &handle, const TYPE &obj)	\
     } else {								\
       MinetMonitoringEventDescription desc;				\
       desc.timestamp=(double)Time();					\
+      desc.source=MyModuleType;                                         \
       desc.from=(*fifo).module;						\
       desc.to=MyModuleType;						\
       desc.datatype = MINETTYPE;					\
+      desc.optype= MINET_RECEIVE;                                       \
       desc.Serialize(MyMonitorFifo);					\
       obj.Serialize(MyMonitorFifo);					\
     }									\
@@ -902,7 +964,7 @@ int MinetReceive(const MinetHandle &handle, TYPE &object)	\
   if (fifo==MyFifos.end()) { 					\
     return -1;							\
   } else {							\
-    object.Serialize((*fifo).to);				\
+    object.Unserialize((*fifo).from);				\
     if (MinetMonitorReceive(handle,object)) {			\
       return -1;						\
     } else {							\
@@ -927,9 +989,23 @@ int MinetSendToMonitor(const MinetMonitoringEvent &obj)
   if (MyMonitorFifo>0) { 
     MinetMonitoringEventDescription desc;
     desc.timestamp=Time();
+    desc.source=MyModuleType;                                         
     desc.from=MyModuleType;
     desc.to=MINET_MONITOR;
     desc.datatype=MINET_MONITORINGEVENT;
+    desc.optype=MINET_SENDTOMONITOR;
+    desc.Serialize(MyMonitorFifo);
+    obj.Serialize(MyMonitorFifo);
+    return 0;
+  } else {
+    return 0;
+  }
+}
+
+
+int MinetSendToMonitor(const MinetMonitoringEventDescription &desc, const MinetMonitoringEvent &obj)
+{
+  if (MyMonitorFifo>0) { 
     desc.Serialize(MyMonitorFifo);
     obj.Serialize(MyMonitorFifo);
     return 0;

@@ -38,8 +38,8 @@ int main(int argc, char *argv[])
   int muxin = open(mux2arp_fifo_name,O_RDONLY);
   int muxout = open(arp2mux_fifo_name,O_WRONLY);
 #if IP
-  int reqin = open(ip2arp_fifo_name,O_RDONLY);
   int reqout = open(arp2ip_fifo_name,O_WRONLY);
+  int reqin = open(ip2arp_fifo_name,O_RDONLY);
 #endif
 
   if (muxin<0 || muxout<0) { 

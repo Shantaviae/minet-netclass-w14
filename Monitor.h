@@ -6,13 +6,30 @@
 #include "Minet.h"
 
 
+enum MinetOpType {
+  MINET_INIT,
+  MINET_DEINIT,
+  MINET_SEND,
+  MINET_RECEIVE,
+  MINET_GETNEXTEVENT,
+  MINET_CONNECT,
+  MINET_ACCEPT,
+  MINET_CLOSE,
+  MINET_SENDTOMONITOR,
+  MINET_NOP,
+};
+
+ostream & operator<<(ostream &os, const MinetOpType &op);
+
 
 
 struct MinetMonitoringEventDescription {
   double         timestamp;
+  MinetModule    source;
   MinetModule    from;
   MinetModule    to;
   MinetDatatype  datatype;
+  MinetOpType    optype;
 
   MinetMonitoringEventDescription();
   MinetMonitoringEventDescription(const MinetMonitoringEventDescription &rhs);

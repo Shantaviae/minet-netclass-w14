@@ -1,7 +1,7 @@
 #!/bin/sh
 
 rm -f pids
-#./monitor.sh
+./monitor.sh
 ./device_driver.sh 
 ./ethernet_mux.sh 
 ./arp_module.sh 
