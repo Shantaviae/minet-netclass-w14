@@ -120,14 +120,15 @@ int main(int argc, char * argv[])
 
 	  cout << "ABOUT TO SEND OUT: " << endl;
 	  Packet check(p);
-	  check.ExtractHeaderFromPayload<EthernetHeader>(ETHERNET_HEADER_LEN);
+	  // No ethernet header yet!
+	  // check.ExtractHeaderFromPayload<EthernetHeader>(ETHERNET_HEADER_LEN);
 	  check.ExtractHeaderFromPayload<IPHeader>(IPHeader::EstimateIPHeaderLength(check));
 	  check.ExtractHeaderFromPayload<ICMPHeader>(ICMP_HEADER_LENGTH);
-	  EthernetHeader eh = check.FindHeader(Headers::EthernetHeader);
+	  //EthernetHeader eh = check.FindHeader(Headers::EthernetHeader);
 	  IPHeader iph = check.FindHeader(Headers::IPHeader);
 	  ICMPHeader icmph = check.FindHeader(Headers::ICMPHeader);
 	  
-	  eh.Print(cerr);  cerr << endl;
+	  //eh.Print(cerr);  cerr << endl;
 	  iph.Print(cerr); cerr << endl;
 	  icmph.Print(cerr);  cerr << endl;
 	  cout << "END OF PACKET" << endl << endl;

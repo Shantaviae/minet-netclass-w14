@@ -3,6 +3,9 @@
 #include <ctype.h>
 #include "minet_socket.h"
 
+#define BUFLEN   15000
+#define GENERATE 0
+
 void usage()
 {
   cerr << "udp_client k|u host port\n";
@@ -10,7 +13,7 @@ void usage()
 
 int main(int argc, char *argv[])
 {
-  char buf[512];
+  char buf[BUFLEN];
   sockaddr_in server_sa, client_sa;
   struct hostent *he;
   int fd, rc;
@@ -85,11 +88,20 @@ int main(int argc, char *argv[])
   cout << "Enter text to send.\n";
 
   while (1) {
-    if ((rc=read(fileno(stdin),buf,512))<0) { 
+#if GENERATE
+    sleep(1);
+    for (int i=0;i<BUFLEN;i++) {
+      buf[i]='a'+i%26;
+    }
+    buf[BUFLEN-1]='\n';
+    rc=BUFLEN;
+#else 
+    if ((rc=read(fileno(stdin),buf,BUFLEN))<0) { 
       cerr << "Read failed.\n";
       minet_perror("reason:");
       goto err;
     } 
+#endif  
     if (rc==0) { 
       cerr << "Done.\n";
       goto done;

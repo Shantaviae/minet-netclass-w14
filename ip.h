@@ -39,7 +39,7 @@ const unsigned char      IP_HEADER_MAX_LENGTH=IP_HEADER_BASE_LENGTH+IP_HEADER_OP
 
 const unsigned char      IP_HEADER_REQUIRED_VERSION=0x4;
 const unsigned char      IP_HEADER_DEFAULT_TOS=0x0;
-const unsigned short     IP_PACKET_MAX_LENGTH=576;
+const unsigned short     IP_PACKET_MAX_LENGTH=65535;
 
 const unsigned char      IP_HEADER_FLAG_RESERVED=0x4;
 const unsigned char      IP_HEADER_FLAG_DONTFRAG=0x2;
