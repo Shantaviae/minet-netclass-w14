@@ -1,6 +1,15 @@
 #!/usr/bin/perl -w
 
-@lines = <STDIN>;
+$file="monitor.stderr.log";
+
+if (!(-e $file)) { 
+	print STDERR "Sorry, $file does not exist.\n";
+	exit;
+}
+
+open(FILE,$file);
+@lines = <FILE>;
+close(FILE);
 
 @sorted = sort compare @lines;
 

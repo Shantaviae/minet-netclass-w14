@@ -126,7 +126,8 @@ $minet_execs="godzilla:/home1/pdinda/netclass-execs";
 "test_arp.sh",
 "udp_module.sh",
 "xterm_pause.sh",
-"kill_matching.pl"
+"kill_matching.pl",
+"sort_monitor_output.pl"
 );
 
 
