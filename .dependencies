@@ -10,7 +10,11 @@ config.o: config.cc config.h
 buffer.o: buffer.cc buffer.h config.h util.h
 error.o: error.cc error.h
 ethernet.o: ethernet.cc ethernet.h config.h raw_ethernet_packet.h \
-  packet.h buffer.h util.h headertrailer.h error.h debug.h
+  packet.h buffer.h util.h headertrailer.h error.h \
+  /usr/include/libnet/libnet-headers.h \
+  /usr/include/libnet/libnet-structures.h \
+  /usr/include/libnet/libnet-asn1.h \
+  /usr/include/libnet/libnet-functions.h debug.h
 headertrailer.o: headertrailer.cc headertrailer.h config.h buffer.h \
   util.h
 packet.o: packet.cc packet.h config.h buffer.h util.h headertrailer.h \
@@ -58,7 +62,11 @@ monitor.o: monitor.cc Minet.h config.h buffer.h util.h debug.h error.h \
   raw_ethernet_packet.h packet.h headertrailer.h \
   raw_ethernet_packet_buffer.h ethernet.h arp.h ip.h icmp.h udp.h tcp.h \
   sock.h sockint.h sock_mod_structs.h constate.h Monitor.h
-device_driver.o: device_driver.cc config.h error.h ethernet.h \
+device_driver.o: device_driver.cc /usr/include/libnet/libnet-macros.h \
+  /usr/include/libnet/libnet-headers.h \
+  /usr/include/libnet/libnet-structures.h \
+  /usr/include/libnet/libnet-asn1.h \
+  /usr/include/libnet/libnet-functions.h config.h error.h ethernet.h \
   raw_ethernet_packet.h packet.h buffer.h util.h headertrailer.h \
   raw_ethernet_packet_buffer.h debug.h
 ethernet_mux.o: ethernet_mux.cc /usr/include/netinet/in.h Minet.h \
@@ -143,9 +151,18 @@ http_server2.o: http_server2.cc minet_socket.h
 http_server3.o: http_server3.cc minet_socket.h
 reader.o: reader.cc config.h raw_ethernet_packet.h packet.h buffer.h \
   util.h headertrailer.h debug.h
-writer.o: writer.cc config.h util.h raw_ethernet_packet.h packet.h \
-  buffer.h headertrailer.h error.h ethernet.h
-device_driver2.o: device_driver2.cc /usr/include/netinet/if_ether.h \
+writer.o: writer.cc /usr/include/libnet/libnet-macros.h \
+  /usr/include/libnet/libnet-headers.h \
+  /usr/include/libnet/libnet-structures.h \
+  /usr/include/libnet/libnet-asn1.h \
+  /usr/include/libnet/libnet-functions.h config.h util.h \
+  raw_ethernet_packet.h packet.h buffer.h headertrailer.h error.h \
+  ethernet.h
+device_driver2.o: device_driver2.cc /usr/include/libnet/libnet-macros.h \
+  /usr/include/libnet/libnet-headers.h \
+  /usr/include/libnet/libnet-structures.h \
+  /usr/include/libnet/libnet-asn1.h \
+  /usr/include/libnet/libnet-functions.h /usr/include/netinet/if_ether.h \
   Minet.h config.h buffer.h util.h debug.h error.h raw_ethernet_packet.h \
   packet.h headertrailer.h raw_ethernet_packet_buffer.h ethernet.h arp.h \
   ip.h icmp.h udp.h tcp.h sock.h sockint.h sock_mod_structs.h constate.h \

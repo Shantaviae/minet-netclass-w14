@@ -1,5 +1,5 @@
 #!/bin/sh
-export MINET_DISPLAY=xterm_pause
+#export MINET_DISPLAY=xterm_pause
 case "foo$MINET_MONITORTYPE" in
    foo) run_module.sh monitor;;
    footext) run_module.sh monitor;;
