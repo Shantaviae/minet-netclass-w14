@@ -237,7 +237,8 @@ sub UpdateFile {
       }
     } else {
 #      print "\n$cmd\n";
-      system "$cmd";
+      system "$cmd"; print "\n";
+      
     }
   } else {
     print "skipping $topath (time=$totime) with $frompath (time=$fromtime)\n";

@@ -104,36 +104,36 @@ void ProcessTCPMessage (SockRequestResponse * s, int & respond) {
 					      s->error);
 	  MinetSend(app,*appmsg);
 	  delete appmsg;
-	  s->error = EOK;
-	  break;
 	}
-	
-	// Need to fix it so that when we close a socket the port is not made
-	// available if another socket is still attached to it.  Also do error
-	// checking to make sure that local connection didn't get muddled.
-	
-	newsock = socks.FindFreeSock();
-	if (newsock > 0) {
-	  c = socks.GetConnection(newsock);
-	  c->src = s->connection.src;
-	  c->dest = s->connection.dest;
-	  c->srcport = s->connection.srcport;
-	  c->destport = s->connection.destport;
-	  c->protocol = s->connection.protocol;
-	  socks.SetStatus(newsock, CONNECTED);
-	  if (app!=MINET_NOHANDLE) {
-	    socks.SetFifoToApp(newsock, app);
-	    socks.SetFifoFromApp(sock, app);
-	    appmsg = new SockLibRequestResponse(mSTATUS,
-						s->connection,
-						newsock,
-						s->data,
-						s->bytes,
-						s->error);
-	    MinetSend(app,*appmsg);
-	    delete appmsg;
-	    break;
-	  }
+	s->error = EOK;
+	break;
+      }
+      
+      // Need to fix it so that when we close a socket the port is not made
+      // available if another socket is still attached to it.  Also do error
+      // checking to make sure that local connection didn't get muddled.
+      
+      newsock = socks.FindFreeSock();
+      if (newsock > 0) {
+	c = socks.GetConnection(newsock);
+	c->src = s->connection.src;
+	c->dest = s->connection.dest;
+	c->srcport = s->connection.srcport;
+	c->destport = s->connection.destport;
+	c->protocol = s->connection.protocol;
+	socks.SetStatus(newsock, CONNECTED);
+	if (app!=MINET_NOHANDLE) {
+	  socks.SetFifoToApp(newsock, app);
+	  socks.SetFifoFromApp(sock, app);
+	  appmsg = new SockLibRequestResponse(mSTATUS,
+					      s->connection,
+					      newsock,
+					      s->data,
+					      s->bytes,
+					      s->error);
+	  MinetSend(app,*appmsg);
+	  delete appmsg;
+	  break;
 	}
       }
       s->error = ERESOURCE_UNAVAIL;
@@ -859,21 +859,17 @@ void ProcessAppRequest(SockLibRequestResponse & s, int & respond)
     
   case mWRITE:
 
-    cout << "trying to write!" << endl;
-
     sock = s.sockfd;
 
     if ((socks.GetStatus(sock) != CONNECTED) || 
 	(app != socks.GetFifoToApp(sock))) {
       s.bytes = 0;
       s.error = EINVALID_OP;
-      cout << "1" << endl;
       break;
     }
     protocol = socks.GetConnection(sock)->protocol;
     if (protocol == IP_PROTO_UDP) {
       if (udp!=MINET_NOHANDLE) { 
-	cout << "2" << endl;
 	respond = 0;
 	srr = new SockRequestResponse(WRITE,
 				      *socks.GetConnection(sock),
@@ -884,13 +880,11 @@ void ProcessAppRequest(SockLibRequestResponse & s, int & respond)
 	socks.SetStatus(sock, WRITE_PENDING);
 	break;
       } else {
-	cout << "3" << endl;
 	s.bytes = 0;
 	s.error = ENOT_IMPLEMENTED;
 	break;
       }
     } else {
-      cout << "4" << endl;
       if (tcp!=MINET_NOHANDLE) { 
 	respond = 0;
 	srr = new SockRequestResponse(WRITE,
