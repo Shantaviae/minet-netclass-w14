@@ -115,6 +115,10 @@ writer: writer.o $(LIBMINET)
 	$(CXX) writer.o $(WRITERLDFLAGS) -o writer
 	-./fixup.sh
 
+bridge: bridge.o 
+	$(CXX) bridge.o $(READERLDFLAGS) $(WRITERLDFLAGS) -o bridge
+
+
 %.o : %.cc
 	$(CXX) $(CXXFLAGS) -c $< -o $(@F)
 
@@ -129,6 +133,9 @@ reader.o : reader.cc
 
 writer.o : writer.cc
 	$(CXX) $(WRITERCXXFLAGS) -c $< -o $(@F)
+
+bridge.o : bridge.cc
+	$(CXX) $(READERCXXFLAGS) $(WRITERCXXFLAGS) -c $< -o $(@F)
 
 depend:
 	$(CXX) $(CXXFLAGS) $(READERCXXFLAGS) $(WRITERCXXFLAGS)  -MM $(OBJS:.o=.cc) > .dependencies
