@@ -44,6 +44,8 @@ int main(int argc, char *argv[])
     return -1;
   }
 
+  cerr << "udp_module handling udp traffic.......\n";
+
   MinetSendToMonitor(MinetMonitoringEvent("udp_module handling udp traffic........"));
 
   MinetEvent event;
@@ -86,108 +88,110 @@ int main(int argc, char *argv[])
 	    MinetSendToMonitor(MinetMonitoringEvent("forwarding packet to sock even though checksum failed"));
 	  }
 	  MinetSend(sock,write);
+	} else {
+	  MinetSendToMonitor(MinetMonitoringEvent("Unknown port, sending ICMP error message"));
+	  IPAddress source; iph.GetSourceIP(source);
+	  ICMPPacket error(source,DESTINATION_UNREACHABLE,PORT_UNREACHABLE,p);
+	  MinetSendToMonitor(MinetMonitoringEvent("ICMP error message has been sent to host"));
+	  MinetSend(mux, error);
 	}
-      }
-      if (event.handle==sock) {
-	SockRequestResponse req;
-	MinetReceive(sock,req);
-	switch (req.type) {
-	  // case SockRequestResponse::CONNECT: 
-	case CONNECT: 
-	  // case SockRequestResponse::ACCEPT: 
-	case ACCEPT: 
-	  { // ignored, send OK response
-	    SockRequestResponse repl;
-	    // repl.type=SockRequestResponse::STATUS;
-	    repl.type=STATUS;
-	    repl.connection=req.connection;
-	    // buffer is zero bytes
-	    repl.bytes=0;
-	    repl.error=EOK;
-	    MinetSend(sock,repl);
-	  }
-	  break;
-	  // case SockRequestResponse::STATUS: 
-	case STATUS: 
-	  // ignored, no response needed
-	  break;
-	  // case SockRequestResponse::WRITE: 
-	case WRITE: 
-	  {
-	    unsigned bytes = MIN(UDP_MAX_DATA, req.data.GetSize());
-	    // create the payload of the packet
-	    Packet p(req.data.ExtractFront(bytes));
-	    // Make the IP header first since we need it to do the udp checksum
-	    IPHeader ih;
-	    ih.SetProtocol(IP_PROTO_UDP);
-	    ih.SetSourceIP(req.connection.src);
-	    ih.SetDestIP(req.connection.dest);
-	    ih.SetTotalLength(bytes+UDP_HEADER_LENGTH+IP_HEADER_BASE_LENGTH);
-	    // push it onto the packet
-	    p.PushFrontHeader(ih);
-	    // Now build the UDP header
-	    // notice that we pass along the packet so that the udpheader can find
-	    // the ip header because it will include some of its fields in the checksum
-	    UDPHeader uh;
-	    uh.SetSourcePort(req.connection.srcport,p);
-	    uh.SetDestPort(req.connection.destport,p);
-	    uh.SetLength(UDP_HEADER_LENGTH+bytes,p);
-	    // Now we want to have the udp header BEHIND the IP header
-	    p.PushBackHeader(uh);
-	    MinetSend(mux,p);
-	    SockRequestResponse repl;
-	    // repl.type=SockRequestResponse::STATUS;
-	    repl.type=STATUS;
-	    repl.connection=req.connection;
-	    repl.bytes=bytes;
-	    repl.error=EOK;
-	    MinetSend(sock,repl);
-	  }
-	  break;
-	  // case SockRequestResponse::FORWARD:
-	case FORWARD:
-	  {
-	    ConnectionToStateMapping<UDPState> m;
-	    m.connection=req.connection;
-	    // remove any old forward that might be there.
-	    ConnectionList<UDPState>::iterator cs = clist.FindMatching(req.connection);
-	    if (cs!=clist.end()) { 
-	      clist.erase(cs);
-	    }
-	    clist.push_back(m);
-	    SockRequestResponse repl;
-	    // repl.type=SockRequestResponse::STATUS;
-	    repl.type=STATUS;
-	    repl.connection=req.connection;
-	    repl.error=EOK;
-	    repl.bytes=0;
-	    MinetSend(sock,repl);
-	  }
-	  break;
-	  // case SockRequestResponse::CLOSE:
-	case CLOSE:
-	  {
-	    ConnectionList<UDPState>::iterator cs = clist.FindMatching(req.connection);
-	    SockRequestResponse repl;
-	    repl.connection=req.connection;
-	    // repl.type=SockRequestResponse::STATUS;
-	    repl.type=STATUS;
-	    if (cs==clist.end()) {
-	      repl.error=ENOMATCH;
-	    } else {
+	if (event.handle==sock) {
+	  SockRequestResponse req;
+	  MinetReceive(sock,req);
+	  switch (req.type) {
+	  case CONNECT: 
+	  case ACCEPT: 
+	    { // ignored, send OK response
+	      SockRequestResponse repl;
+	      repl.type=STATUS;
+	      repl.connection=req.connection;
+	      // buffer is zero bytes
+	      repl.bytes=0;
 	      repl.error=EOK;
-	      clist.erase(cs);
+	      MinetSend(sock,repl);
 	    }
-	    MinetSend(sock,repl);
-	  }
-	  break;
-	default:
-	  {
-	    SockRequestResponse repl;
-	    // repl.type=SockRequestResponse::STATUS;
-	    repl.type=STATUS;
-	    repl.error=EWHAT;
-	    MinetSend(sock,repl);
+	    break;
+	  case STATUS: 
+	    // ignored, no response needed
+	    break;
+	    // case SockRequestResponse::WRITE: 
+	  case WRITE: 
+	    {
+	      unsigned bytes = MIN(UDP_MAX_DATA, req.data.GetSize());
+	      // create the payload of the packet
+	      Packet p(req.data.ExtractFront(bytes));
+	      // Make the IP header first since we need it to do the udp checksum
+	      IPHeader ih;
+	      ih.SetProtocol(IP_PROTO_UDP);
+	      ih.SetSourceIP(req.connection.src);
+	      ih.SetDestIP(req.connection.dest);
+	      ih.SetTotalLength(bytes+UDP_HEADER_LENGTH+IP_HEADER_BASE_LENGTH);
+	      // push it onto the packet
+	      p.PushFrontHeader(ih);
+	      // Now build the UDP header
+	      // notice that we pass along the packet so that the udpheader can find
+	      // the ip header because it will include some of its fields in the checksum
+	      UDPHeader uh;
+	      uh.SetSourcePort(req.connection.srcport,p);
+	      uh.SetDestPort(req.connection.destport,p);
+	      uh.SetLength(UDP_HEADER_LENGTH+bytes,p);
+	      // Now we want to have the udp header BEHIND the IP header
+	      p.PushBackHeader(uh);
+	      MinetSend(mux,p);
+	      SockRequestResponse repl;
+	      // repl.type=SockRequestResponse::STATUS;
+	      repl.type=STATUS;
+	      repl.connection=req.connection;
+	      repl.bytes=bytes;
+	      repl.error=EOK;
+	      MinetSend(sock,repl);
+	    }
+	    break;
+	    // case SockRequestResponse::FORWARD:
+	  case FORWARD:
+	    {
+	      ConnectionToStateMapping<UDPState> m;
+	      m.connection=req.connection;
+	      // remove any old forward that might be there.
+	      ConnectionList<UDPState>::iterator cs = clist.FindMatching(req.connection);
+	      if (cs!=clist.end()) { 
+		clist.erase(cs);
+	      }
+	      clist.push_back(m);
+	      SockRequestResponse repl;
+	      // repl.type=SockRequestResponse::STATUS;
+	      repl.type=STATUS;
+	      repl.connection=req.connection;
+	      repl.error=EOK;
+	      repl.bytes=0;
+	      MinetSend(sock,repl);
+	    }
+	    break;
+	    // case SockRequestResponse::CLOSE:
+	  case CLOSE:
+	    {
+	      ConnectionList<UDPState>::iterator cs = clist.FindMatching(req.connection);
+	      SockRequestResponse repl;
+	      repl.connection=req.connection;
+	      // repl.type=SockRequestResponse::STATUS;
+	      repl.type=STATUS;
+	      if (cs==clist.end()) {
+		repl.error=ENOMATCH;
+	      } else {
+		repl.error=EOK;
+		clist.erase(cs);
+	      }
+	      MinetSend(sock,repl);
+	    }
+	    break;
+	  default:
+	    {
+	      SockRequestResponse repl;
+	      // repl.type=SockRequestResponse::STATUS;
+	      repl.type=STATUS;
+	      repl.error=EWHAT;
+	      MinetSend(sock,repl);
+	    }
 	  }
 	}
       }

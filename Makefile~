@@ -73,8 +73,8 @@ LIBNETLDFLAGS = `libnet-config --libs`
 PCAPCFLAGS  = -I/usr/include/pcap
 PCAPLDFLAGS = -lpcap
 
-CXX=g++
-CC=gcc
+CXX=g++ -Wall
+CC=gcc -Wall
 AR=ar
 RANLAB=ranlib
 

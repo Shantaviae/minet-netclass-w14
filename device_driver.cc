@@ -16,6 +16,9 @@ extern "C" {
 #include "debug.h"
 
 
+#define DEBUG_SEND 0
+#define DEBUG_RECV 0
+
 int MyISR(int device, int service);
 
 EthernetConfig myconfig={0,0,MyISR};
@@ -36,7 +39,9 @@ int ReceiveNextPacket()
     fprintf(stderr,"Can't get next packet!\n");
     return -1;
   }
-  //packet.Print(20,stderr);
+#if DEBUG_RECV
+  cerr << "device: received packet :" << packet<<"\n";
+#endif
   rc=input_queue->PushPacket(&packet);
   switch (rc) { 
   case PACKETBUFFER_OK:
@@ -62,7 +67,9 @@ int SendNextPacket()
   switch (rc) { 
   case PACKETBUFFER_OK:
     DEBUGPRINTF(5,"Initsending next outgoing packet\n");
-    cerr << "device_driver: sending packet :" << packet <<"\n";
+#if DEBUG_SEND
+    cerr << "device: sending packet :" << packet <<"\n";
+#endif
     if (EthernetInitiateSend(&myconfig,&packet)!=0) {
       DEBUGPRINTF(5,"Initsend failed: packet dropped\n");
       cerr << "device_driver: send failed\n";
@@ -141,6 +148,9 @@ int main(int argc, char *argv[])
 
   EthernetStartup(&myconfig);
 
+
+  cerr << "device_driver operating\n";
+
   int maxfd=0;
 
   while (1) {
@@ -175,6 +185,9 @@ int main(int argc, char *argv[])
 	/* we can output the next packet now, if there is one */
 	if (input_queue->PullPacket(&packet)==PACKETBUFFER_OK) { 
 	  packet.Serialize(muxout);
+#if DEBUG_RECV
+	  cerr << "New input packet: "<<packet<<"\n";
+#endif
 	} else {
 	  DEBUGPRINTF(5,"No packets available, so ISR did not output one\n");
 	}
@@ -183,7 +196,9 @@ int main(int argc, char *argv[])
 	DEBUGPRINTF(3,"ISR about to input next packet from mux\n");
 	/* we can input the next packet now */
 	packet.Unserialize(muxin);
+#if DEBUG_SEND
 	cerr << "New output packet: "<<packet<<"\n";
+#endif
 	if (output_queue->PushPacket(&packet)!=PACKETBUFFER_OK) { 
 	  DEBUGPRINTF(3,"Ouput queue full, packet dropped\n");
 	} 

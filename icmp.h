@@ -100,13 +100,13 @@ class ICMPHeader : public Header {
 
 
 
-class icmp_packet : public Packet {
+class ICMPPacket : public Packet {
  public:
-  icmp_packet();
-  icmp_packet(const Packet &rhs);
-  icmp_packet(const RawEthernetPacket &rhs);
+  ICMPPacket();
+  ICMPPacket(const Packet &rhs);
+  ICMPPacket(const RawEthernetPacket &rhs);
 
-  icmp_packet(const Packet &original,
+  ICMPPacket(const Packet &original,
 	      const IPAddress &source,
 	      const IPAddress &destination, 
 	      const unsigned char &type, 
@@ -116,20 +116,20 @@ class icmp_packet : public Packet {
 	      Buffer &payload);
 
   // request / reply constructors
-  icmp_packet(const IPAddress &destination, 
+  ICMPPacket(const IPAddress &destination, 
 	      const unsigned char &type, const unsigned char &code,
 	      const unsigned short &identifier, const unsigned short &seqnumber);
-  icmp_packet(const IPAddress &destination,
+  ICMPPacket(const IPAddress &destination,
 	      const unsigned char &type, const unsigned char &code);
-  icmp_packet(const IPAddress &destination,
+  ICMPPacket(const IPAddress &destination,
 	      const unsigned char &type);
 
   // error constructors
-  icmp_packet(const IPAddress &destination, 
+  ICMPPacket(const IPAddress &destination, 
 	      const unsigned char &type, const unsigned char &code,
 	      const unsigned short &identifier, const unsigned short &seqnumber,
 	      const Packet &p);
-  icmp_packet(const IPAddress &destination,
+  ICMPPacket(const IPAddress &destination,
 	      const unsigned char &type, const unsigned char &code,
 	      const Packet &p);
 

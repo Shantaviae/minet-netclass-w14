@@ -51,6 +51,9 @@ int main(int argc, char *argv[])
   SockLibRequestResponse slrr;
   ARPRequestResponse arr;
 
+
+  cerr << "monitor running\n";
+
   while (MinetGetNextEvent(myevent)==0) {
     if (myevent.eventtype!=MinetEvent::Dataflow || myevent.direction!=MinetEvent::IN) {
       cerr << "Ignoring this event: "<<myevent<<endl;

@@ -15,6 +15,9 @@
 
 #include "Minet.h"
 
+#define DEBUG_SEND 0
+#define DEBUG_RECV 0
+
 struct ICMPState {
   ostream & Print(ostream &os) const { os <<"ICMPState()"; return os;}
 };
@@ -41,7 +44,12 @@ int main(int argc, char *argv[])
     return -1;
   }
 
+
+  cerr << "icmp_module handling icmp traffic\n";
+
   MinetSendToMonitor(MinetMonitoringEvent("icmp_module handling icmp traffic"));
+
+
 
   MinetEvent event;
 
@@ -57,72 +65,62 @@ int main(int argc, char *argv[])
 	p.ExtractHeaderFromPayload<ICMPHeader>(ICMP_HEADER_LENGTH);
 
 	// received packet information
+#if DEBUG_RECV
 	cerr << "Received ICMP/Packet: " << endl;
 	DebugDump(p);
+#endif
 
 	// respond to packet
-	icmp_packet response;
+	ICMPPacket response;
 	response.respond(p);
 
 	if (response.requires_reply())
-	{
-	  cerr << "Sent Packet: " << endl;
-	  DebugDump(response);  cerr << endl;
-
-	  MinetSend(ipmux, response);
-	}
+	  {
+#if DEBUG_RECV
+	    cerr << "Sent Packet: " << endl;
+	    DebugDump(response);  cerr << endl;
+#endif
+	    MinetSend(ipmux, response);
+	  }
 	else
-	{
-	  IPHeader iph = response.FindHeader(Headers::IPHeader);
-	  ICMPHeader icmph = response.FindHeader(Headers::ICMPHeader);
+	  {
+	    IPHeader iph = response.FindHeader(Headers::IPHeader);
+	    ICMPHeader icmph = response.FindHeader(Headers::ICMPHeader);
 
-	  // make new connection
-	  Connection c;
-	  iph.GetDestIP(c.dest);
-	  iph.GetSourceIP(c.src);
-	  iph.GetProtocol(c.protocol);
-	  c.srcport = PORT_NONE;
-	  c.destport = PORT_NONE;
+	    // make new connection
+	    Connection c;
+	    iph.GetDestIP(c.dest);
+	    iph.GetSourceIP(c.src);
+	    iph.GetProtocol(c.protocol);
+	    c.srcport = PORT_NONE;
+	    c.destport = PORT_NONE;
 
-	  // ConnectionList<ICMPState>::iterator cs = clist.FindMatching(c);
-	  // if (cs!=clist.end()) {}
+	    // ConnectionList<ICMPState>::iterator cs = clist.FindMatching(c);
+	    // if (cs!=clist.end()) {}
 
-	  Buffer data;  icmph.GetIphandIcmphEightBytes(response, data);
-	  data.AddBack(response.GetPayload());
-	  SockRequestResponse write(WRITE,
-				    c, //(*cs).connection,
-				    data,
-				    data.GetSize(),
-				    EOK);
-	  
-	  cerr << "Forwarding ICMP Packet to Sock" << endl;
-	  MinetSend(sock,write);
-	}
+	    Buffer data;  icmph.GetIphandIcmphEightBytes(response, data);
+	    data.AddBack(response.GetPayload());
+	    SockRequestResponse write(WRITE,
+				      c, //(*cs).connection,
+				      data,
+				      data.GetSize(),
+				      EOK);
 
-	/*
-	icmp_packet request("129.105.100.9", ECHO_REQUEST);
-	cerr << "REQUEST: " << endl;
-	DebugDump(request);  cerr << endl;
-	MinetSend(ipmux, request);
-	*/
-	/*
-	icmp_packet error("129.105.100.9", DESTINATION_UNREACHABLE, PROTOCOL_UNREACHABLE, p, IP_PROTO_ICMP);
-	cerr << "ERROR: " << endl;
-	DebugDump(error);  cerr << endl;
-	MinetSend(ipmux, error);
-	*/
+#if DEBUG_RECV	  
+	    cerr << "Forwarding ICMP Packet to Sock" << endl;
+#endif
+	    // not sure why this is happening -PAD
+	    MinetSend(sock,write);
+	  }
       }
-
-    
+      
       if (event.handle==sock) {
 	SockRequestResponse req;
 	MinetReceive(sock,req);
 
 	switch (req.type) {
-	  // case SockRequestResponse::CONNECT: 
 	case CONNECT: 
 	  break;
-	  // case SockRequestResponse::ACCEPT: 
 	case ACCEPT: 
 	  { 
 	    // ignored, send OK response
@@ -136,13 +134,14 @@ int main(int argc, char *argv[])
 	    MinetSend(sock,repl);
 	  }
 	  break;
-	  // case SockRequestResponse::STATUS: 
 	case STATUS: 
 	  // ignored, no response needed
 	  break;
-	  // case SockRequestResponse::WRITE: 
 	case WRITE: 
 	  {
+	    // Not really clear what this is/was trying to do... -PAD
+	    //
+	    // FIXTHIS
 	    /*
 	      unsigned bytes = MIN(UDP_MAX_DATA, req.data.GetSize());
 	      // create the payload of the packet
@@ -176,8 +175,7 @@ int main(int argc, char *argv[])
 	    */
 	  }
 	  break;
-	  // case SockRequestResponse::FORWARD:
- 	case FORWARD:
+	case FORWARD:
 	  {
 	    cout << "forward" << endl;
 	    ConnectionToStateMapping<ICMPState> m;
@@ -189,7 +187,6 @@ int main(int argc, char *argv[])
 	    }
 	    clist.push_back(m);
 	    SockRequestResponse repl;
-	    // repl.type=SockRequestResponse::STATUS;
 	    repl.type=STATUS;
 	    repl.connection=req.connection;
 	    repl.error=EOK;
@@ -197,14 +194,12 @@ int main(int argc, char *argv[])
 	    MinetSend(sock,repl);
 	  }
 	  break;
-	  // case SockRequestResponse::CLOSE:
 	case CLOSE:
 	  {
 	    cout << "close" << endl;
 	    ConnectionList<ICMPState>::iterator cs = clist.FindMatching(req.connection);
 	    SockRequestResponse repl;
 	    repl.connection=req.connection;
-	    // repl.type=SockRequestResponse::STATUS;
 	    repl.type=STATUS;
 	    if (cs==clist.end()) {
 	      repl.error=ENOMATCH;
@@ -219,7 +214,6 @@ int main(int argc, char *argv[])
 	  {
 	    cout << "default" << endl;
 	    SockRequestResponse repl;
-	    // repl.type=SockRequestResponse::STATUS;
 	    repl.type=STATUS;
 	    repl.error=EWHAT;
 	    MinetSend(sock,repl);
@@ -228,7 +222,7 @@ int main(int argc, char *argv[])
       }   
     }
   }
-
+    
   MinetDeinit();
   return 0;
 }

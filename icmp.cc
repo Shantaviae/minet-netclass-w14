@@ -274,13 +274,13 @@ ostream & ICMPHeader::Print(ostream &os) const
 
 
 // ***** ICMPPacket DECLARATIONS *****
-icmp_packet::icmp_packet() : Packet()
+ICMPPacket::ICMPPacket() : Packet()
 {}
 
-icmp_packet::icmp_packet(const Packet &rhs) : Packet(rhs)
+ICMPPacket::ICMPPacket(const Packet &rhs) : Packet(rhs)
 {}
 
-icmp_packet::icmp_packet(const Packet &original, 
+ICMPPacket::ICMPPacket(const Packet &original, 
 			 const IPAddress &source, const IPAddress &destination,
 			 const unsigned char &type, const unsigned char &code,
 			 const unsigned short &identifier, const unsigned short &seqnumber,
@@ -325,7 +325,7 @@ icmp_packet::icmp_packet(const Packet &original,
 }
 
 //request / reply constructors
-icmp_packet::icmp_packet(const IPAddress &destination,
+ICMPPacket::ICMPPacket(const IPAddress &destination,
 			 const unsigned char &type, const unsigned char &code,
 			 const unsigned short &identifier, const unsigned short &seqnumber)
 {
@@ -334,11 +334,11 @@ icmp_packet::icmp_packet(const IPAddress &destination,
   memset((char*)buffer, 0, 2*56);
   Buffer payload((char*)buffer, 56);
 
-  icmp_packet p((*this), getenv("MINET_IPADDR"), destination, type, code, identifier, seqnumber, payload);
+  ICMPPacket p((*this), getenv("MINET_IPADDR"), destination, type, code, identifier, seqnumber, payload);
   *this = p;
 }
 
-icmp_packet::icmp_packet(const IPAddress &destination,
+ICMPPacket::ICMPPacket(const IPAddress &destination,
 			 const unsigned char &type, const unsigned char &code)
 {
   // create new payload 
@@ -346,11 +346,11 @@ icmp_packet::icmp_packet(const IPAddress &destination,
   memset((char*)buffer, 0, 2*56);
   Buffer payload((char*)buffer, 56);
 
-  icmp_packet p((*this), getenv("MINET_IPADDR"),  destination, type, code, 0, 0, payload);
+  ICMPPacket p((*this), getenv("MINET_IPADDR"),  destination, type, code, 0, 0, payload);
   *this = p;
 }
 
-icmp_packet::icmp_packet(const IPAddress &destination,
+ICMPPacket::ICMPPacket(const IPAddress &destination,
 			 const unsigned char &type)
 {
   // create new payload 
@@ -358,12 +358,12 @@ icmp_packet::icmp_packet(const IPAddress &destination,
   memset((char*)buffer, 0, 2*56);
   Buffer payload((char*)buffer, 56);
 
-  icmp_packet p((*this), getenv("MINET_IPADDR"),  destination, type, 0, 0, 0, payload);
+  ICMPPacket p((*this), getenv("MINET_IPADDR"),  destination, type, 0, 0, 0, payload);
   *this = p;
 }
 
 // error constructors
-icmp_packet::icmp_packet(const IPAddress &destination,
+ICMPPacket::ICMPPacket(const IPAddress &destination,
 			 const unsigned char &type, const unsigned char &code,
 			 const unsigned short &identifier, const unsigned short &seqnumber,
 			 const Packet &p)
@@ -375,11 +375,11 @@ icmp_packet::icmp_packet(const IPAddress &destination,
   Buffer data((char*)buffer, 56);
   ExtractIphandEightBytes(pkt, data);
 
-  icmp_packet error((*this), getenv("MINET_IPADDR"), destination, type, code, identifier, seqnumber, data);
+  ICMPPacket error((*this), getenv("MINET_IPADDR"), destination, type, code, identifier, seqnumber, data);
   *this = error;
 }
 
-icmp_packet::icmp_packet(const IPAddress &destination,
+ICMPPacket::ICMPPacket(const IPAddress &destination,
 			 const unsigned char &type, const unsigned char &code,
 			 const Packet &p)
 {
@@ -390,7 +390,7 @@ icmp_packet::icmp_packet(const IPAddress &destination,
   Buffer data((char*)buffer, 56);
   ExtractIphandEightBytes(pkt, data);
 
-  icmp_packet error((*this), getenv("MINET_IPADDR"),  destination, type, code, 0, 0, data);
+  ICMPPacket error((*this), getenv("MINET_IPADDR"),  destination, type, code, 0, 0, data);
   *this = error;
 }
 
@@ -398,7 +398,7 @@ icmp_packet::icmp_packet(const IPAddress &destination,
 
 
 // ***** ICMPPacket ACCESSOR FUNCTIONS *****
-void icmp_packet::ExtractIphandIcmphEightBytes(const Packet &p, Buffer &data)
+void ICMPPacket::ExtractIphandIcmphEightBytes(const Packet &p, Buffer &data)
 {
   data.Clear();
 
@@ -409,7 +409,7 @@ void icmp_packet::ExtractIphandIcmphEightBytes(const Packet &p, Buffer &data)
   data.AddFront(iph);
   data.AddBack(icmph);
 }
-void icmp_packet::ExtractIphandEightBytes(const Packet &p, Buffer &data)
+void ICMPPacket::ExtractIphandEightBytes(const Packet &p, Buffer &data)
 {
   data.Clear();
   Packet pkt(p);
@@ -420,7 +420,7 @@ void icmp_packet::ExtractIphandEightBytes(const Packet &p, Buffer &data)
   data.AddFront(iph);
   data.AddBack( pkt.GetPayload().ExtractFront(8));
 }
-void icmp_packet::SetIphandEightBytes(Buffer &payload, Buffer &data)
+void ICMPPacket::SetIphandEightBytes(Buffer &payload, Buffer &data)
 {
   payload = data;
 }
@@ -429,9 +429,9 @@ void icmp_packet::SetIphandEightBytes(Buffer &payload, Buffer &data)
 
 
 // ***** ICMPPacket HELPER FUNCTIONS *****
-void icmp_packet::respond(const Packet &p)
+void ICMPPacket::respond(const Packet &p)
 {
-  icmp_packet response(p);
+  ICMPPacket response(p);
   *this = response;
 
   // get header information
@@ -473,7 +473,7 @@ void icmp_packet::respond(const Packet &p)
     cout << "Invalid ICMP Packet" << endl;
 }
 
-void icmp_packet::respond(const RawEthernetPacket &rp)
+void ICMPPacket::respond(const RawEthernetPacket &rp)
 {
   Packet p(rp);
   p.ExtractHeaderFromPayload<EthernetHeader>(ETHERNET_HEADER_LEN);
@@ -483,19 +483,19 @@ void icmp_packet::respond(const RawEthernetPacket &rp)
   respond(p);
 }
 
-void icmp_packet::respond_in_ip_module(const Packet &p)
+void ICMPPacket::respond_in_ip_module(const Packet &p)
 {
   Packet pkt(p);
   pkt.ExtractHeaderFromPayload<ICMPHeader>(ICMP_HEADER_LENGTH);
   respond(pkt);
 }
 
-bool icmp_packet::requires_reply()
+bool ICMPPacket::requires_reply()
 {
   return requires_response;
 }
 
-void icmp_packet::handle_response(IPHeader &iph, ICMPHeader &icmph, 
+void ICMPPacket::handle_response(IPHeader &iph, ICMPHeader &icmph, 
 				  Buffer &payload, unsigned char &icmp_type)
 {
   if (unsigned(icmp_type) == ECHO_REQUEST) {
@@ -521,7 +521,7 @@ void icmp_packet::handle_response(IPHeader &iph, ICMPHeader &icmph,
   }
 }
 
-void icmp_packet::handle_error(IPHeader &iph, ICMPHeader &icmph, Buffer &payload, unsigned char &icmp_type)
+void ICMPPacket::handle_error(IPHeader &iph, ICMPHeader &icmph, Buffer &payload, unsigned char &icmp_type)
 { 
   if (unsigned(icmp_type) == REDIRECT) {
     ; // modify route table

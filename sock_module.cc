@@ -11,6 +11,11 @@
 
 #include "Minet.h"
 
+#define DEBUG_APP 0
+#define DEBUG_UDP 0
+#define DEBUG_TCP 0
+#define DEBUG_ICMP 0
+
 SockStatus socks;
 PortStatus ports;
 
@@ -398,6 +403,16 @@ void ProcessICMPMessage (SockRequestResponse * s, int & respond) {
 
     // sending up to application layer currently is currently not implemented
     // respond to ICMP packet
+
+    //
+    // Basically, all icmp packets are sent up to sock by icmp_module
+    // sock_module just prints and then responds with a status ok.
+    //
+    // the data is just dropped on the floor.
+    //
+    // What this should do is find connections that match the error
+    // returns and then return errors to the application
+    // FIX -PAD
     switch(unsigned (icmp_type)) {
     case ECHO_REPLY:
       cerr << "[ECHO REPLY]" << endl;
@@ -417,7 +432,7 @@ void ProcessICMPMessage (SockRequestResponse * s, int & respond) {
     case ADDRESSMASK_REPLY:
       cerr << "[ADDRESS MASK REPLY]" << endl;
       icmph.GetAddressMask(payload, address_mask);
-      cout << "received address mask: " << address_mask << endl;
+      cerr << "received address mask: " << address_mask << endl;
       break;
     case DESTINATION_UNREACHABLE:
       switch(unsigned(icmp_code)) {
@@ -852,13 +867,13 @@ void ProcessAppRequest(SockLibRequestResponse & s, int & respond)
 	(app != socks.GetFifoToApp(sock))) {
       s.bytes = 0;
       s.error = EINVALID_OP;
-cout << "1" << endl;
+      cout << "1" << endl;
       break;
     }
     protocol = socks.GetConnection(sock)->protocol;
     if (protocol == IP_PROTO_UDP) {
       if (udp!=MINET_NOHANDLE) { 
-cout << "2" << endl;
+	cout << "2" << endl;
 	respond = 0;
 	srr = new SockRequestResponse(WRITE,
 				      *socks.GetConnection(sock),
@@ -869,13 +884,13 @@ cout << "2" << endl;
 	socks.SetStatus(sock, WRITE_PENDING);
 	break;
       } else {
-cout << "3" << endl;
+	cout << "3" << endl;
 	s.bytes = 0;
 	s.error = ENOT_IMPLEMENTED;
 	break;
       }
     } else {
-cout << "4" << endl;
+      cout << "4" << endl;
       if (tcp!=MINET_NOHANDLE) { 
 	respond = 0;
 	srr = new SockRequestResponse(WRITE,
@@ -963,7 +978,9 @@ int main(int argc, char *argv[]) {
     return -1;
   }
   
-  
+
+  cerr << "sock_module fully armed and operational\n";
+
   MinetSendToMonitor(MinetMonitoringEvent("sock_module fully armed and operational"));
 		     
   MinetEvent event;

@@ -35,6 +35,8 @@ int main(int argc, char *argv[])
     MinetSendToMonitor(MinetMonitoringEvent("Can't accept from sock_module"));
     return -1;
   }
+  
+  cerr << "ipother_module handling non-UDP, non-TCP, non-ICMP traffic......."<<endl;
 
   MinetSendToMonitor(MinetMonitoringEvent("ipother_module handling non-UDP, non-TCP, non-ICMP traffic........"));
 
@@ -56,7 +58,6 @@ int main(int argc, char *argv[])
 	case STATUS: 
 	  // ignored, no response needed
 	  break;
-	  // case SockRequestResponse::WRITE: 
 	case CONNECT: 
 	case ACCEPT: 
 	case WRITE: 

@@ -16,15 +16,15 @@
 #include "Minet.h"
 #include "bitsource.h"
 
-#define DIFFUSION_HACK         1
-#define DIFFUSION_RES_TOS      1
-#define DIFFUSION_ID_DF        1
-#define DIFFUSION_RES_FLAGS    1
+#define DIFFUSION_HACK         0
+#define DIFFUSION_RES_TOS      0
+#define DIFFUSION_ID_DF        0
+#define DIFFUSION_RES_FLAGS    0
 #define DIFFUSION_DF_FRAGOFF   0
 #define DIFFUSION_CHECKSUM     0
 
 
-#define FORCE_ROUTE_THROUGH_GATEWAY 1
+#define FORCE_ROUTE_THROUGH_GATEWAY 0
 
 
 int main(int argc, char *argv[])
@@ -76,7 +76,6 @@ int main(int argc, char *argv[])
 	p.ExtractHeaderFromPayload<IPHeader>(IPHeader::EstimateIPHeaderLength(p));
 	IPHeader iph;
 	iph=p.FindHeader(Headers::IPHeader);
-
 
 	cerr << "Received Packet: " << endl;
 	iph.Print(cerr);  cerr << endl;  p.Print(cerr);  cerr << endl;
@@ -139,7 +138,7 @@ int main(int argc, char *argv[])
 
 	    IPAddress src;  iph.GetSourceIP(src);
 	    // "2" specifies the octet that is wrong (in this case, the checksum)
-	    icmp_packet error(src, PARAMETER_PROBLEM, 2, p);
+	    ICMPPacket error(src, PARAMETER_PROBLEM, 2, p);
 	    MinetSendToMonitor(MinetMonitoringEvent("ICMP error message has been sent to host"));
 
 	    // add ethernet header
@@ -184,7 +183,7 @@ int main(int argc, char *argv[])
 	/*
 	// EXAMPLE: RESPONDING TO ICMP REQUESTS FROM IP_MODULE (RAW)
 	// respond to packet
-	icmp_packet response;
+	ICMPPacket response;
 	response.respond(raw);
 
 	// add ethernet header
@@ -219,7 +218,7 @@ int main(int argc, char *argv[])
 	/*
 	// EXAMPLE: RESPONDING TO ICMP REQUESTS FROM IP_MODULE (PACKET)
 	// respond to packet
-	icmp_packet response;
+	ICMPPacket response;
 	response.respond_in_ip_module(p);
 
 	// add ethernet header
@@ -253,7 +252,7 @@ int main(int argc, char *argv[])
 
 	/*
 	// EXAMPLE: SENDING ICMP ERRORS FROM IP_MODULE
-	icmp_packet error("129.105.100.9", DESTINATION_UNREACHABLE, PROTOCOL_UNREACHABLE, p, IP_PROTO_IP);
+	ICMPPacket error("129.105.100.9", DESTINATION_UNREACHABLE, PROTOCOL_UNREACHABLE, p, IP_PROTO_IP);
 
 	// add ethernet header
 	IPHeader error_iph = response.FindHeader(Headers::IPHeader);

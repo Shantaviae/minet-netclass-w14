@@ -14,6 +14,10 @@
 
 #include "Minet.h"
 
+#define DEBUG_SEND 0
+#define DEBUG_RECV 0
+#define DEBUG_ARP  0
+
 
 int main(int argc, char * argv[])
 {
@@ -80,13 +84,16 @@ int main(int argc, char * argv[])
       if (event.handle==arp) {
 	RawEthernetPacket p;
 	MinetReceive(arp,p);
+#if DEBUG_ARP
 	cout << "Writing out ARP Packet: " << p << endl;
+#endif
 	MinetSend(dd,p);
       }
       if (event.handle==ip) {
 	RawEthernetPacket p;
 	MinetReceive(ip,p);
 	
+#if DEBUG_SEND
 	cout << "ABOUT TO SEND OUT: " << endl;
 	Packet check(p);
 	check.ExtractHeaderFromPayload<EthernetHeader>(ETHERNET_HEADER_LEN);
@@ -100,6 +107,7 @@ int main(int argc, char * argv[])
 	iph.Print(cerr); cerr << endl;
 	icmph.Print(cerr);  cerr << endl;
 	cout << "END OF PACKET" << endl << endl;
+#endif
 
 	MinetSend(dd,p);
       }
