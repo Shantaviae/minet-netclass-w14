@@ -104,9 +104,9 @@ class MinetException : public string {
   MinetException(const char *rhs) : string(rhs) {}
   virtual ~MinetException() {}
   const MinetException &operator=(const MinetException &rhs) 
-    { ((string*)this)->operator=((const string &)rhs);}
+    { return ((string*)this)->operator=((const string &)rhs);}
   virtual ostream & Print(ostream &os) const 
-    { os << "MinetException("<<((const string &)(*this))<<")"; }
+    { os << "MinetException("<<((const string &)(*this))<<")"; return os;}
 };
 
 
