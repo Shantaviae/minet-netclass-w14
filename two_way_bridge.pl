@@ -10,17 +10,18 @@ $localbridge="./bridge";
 $remotebridge="./bridge";
 
 $sleepsecs=30;
-$device="eth0";
 
-$#ARGV>=1 or die "usage: two_way_bridge.pl remote_account addresses+\n";
+$#ARGV>=3 or die "usage: two_way_bridge.pl remote_account local_device remote_device addresses+\n";
 
 $account=shift;
+$localdev=shift;
+$remotedev=shift;
 foreach $arg (@ARGV) {
   chomp($arg);
   $addrs.=" ".$arg;
 }
 
-$cmd="(sleep $sleepsecs; export MINET_ETHERNETADDR=junk; $localbridge $device local $addrs ) | ssh $account \"(export MINET_ETHERNETADDR=junk; $remotebridge eth0 remote $addrs) | (sleep $sleepsecs; export MINET_ETHERNETADDR=junk; $localbridge $device local $addrs > /dev/null)\"";
+$cmd="((sleep $sleepsecs; export MINET_ETHERNETADDR=junk; $localbridge $localdev local $addrs 2>/dev/null) | ssh $account \"(export MINET_ETHERNETADDR=junk; $remotebridge $remotedev remote $addrs 2>/dev/null)\" | (sleep $sleepsecs; export MINET_ETHERNETADDR=junk; $localbridge $localdev local $addrs 1>/dev/null 2>/dev/null))";
 
 print "Executing '$cmd'\nPlease type password within $sleepsecs seconds\n";
 

@@ -12,6 +12,7 @@ extern "C" {
 #include "error.h"
 #include "ethernet.h"
 
+#define LIBNET11 1
 
 /*
    Bridge code for Virtuoso project 
@@ -20,8 +21,9 @@ extern "C" {
 
 void usage()
 {
-  cerr<<"usage: bridge device local|remote ethernetaddress+\n\n"
+  cerr<<"usage: bridge device local|remote remotemacaddr otheraddrs*\n\n"
       <<"In local mode, packets sent to any of the ethernet addresses\n"
+      <<"  and not originating from remotemacaddr\n"
       <<"  are serialized as RawEthernetPackets to stdout and any\n"
       <<"  RawEthernetPackets seen on stdin are written to the network\n"
       <<"In remote mode, packets received from any of the ethernet\n"
@@ -38,7 +40,11 @@ enum {LOCAL, REMOTE} config;
 
 // libnet stuff
 char net_errbuf[LIBNET_ERRORBUF_SIZE];
+#if LIBNET11
+libnet_t *net_interface;
+#else
 struct libnet_link_int *net_interface;
+#endif
 
 // libpcap stuff
 const int pcap_proglen=10240;
@@ -55,7 +61,11 @@ int pcap_fd;
 void Init()
 {
   // establish libnet session
+#if LIBNET11
+  net_interface=libnet_init(LIBNET_LINK_ADV,device,net_errbuf);
+#else
   net_interface=libnet_open_link_interface(device,net_errbuf);
+#endif
   if (net_interface==NULL) { 
     cerr<<"Can't open interface: "<<net_errbuf<<endl;
     exit(-1);
@@ -79,17 +89,25 @@ void Init()
   } else {
     strcpy(dir,"src ");
   }
+  if (config==LOCAL) {
+    (*(addresses.begin())).GetAsString(addr);
+    sprintf(pcap_program,"(not ether src %s) and (",addr);
+  }
   for (deque<EthernetAddr>::const_iterator i=addresses.begin();
        i!=addresses.end();
        ++i) {
     if (i!=addresses.begin()) {
       strcat(pcap_program," or ");
-    }
+    } 
     (*i).GetAsString(addr);
     strcat(pcap_program,"ether ");
     strcat(pcap_program,dir);
     strcat(pcap_program,addr);
   }
+  if (config==LOCAL) {
+    strcat(pcap_program,")");
+  }
+    
   cerr <<"pcap_program='"<<pcap_program<<"'"<<endl;
   if (pcap_compile(pcap_interface,&pcap_filter,pcap_program,0,pcap_mask)) {
     cerr<<"Can't compile filter\n";
@@ -131,10 +149,16 @@ void ProcessStdin()
   
   cerr << (config==LOCAL ? "Local: " : "Remote: ") << "Emitting "<<p<<endl;
   
+#if LIBNET11
+  if (libnet_adv_write_link(net_interface,
+			      (u_char *)(p.data),
+			      p.size)<0) {
+#else
   if (libnet_write_link_layer(net_interface,
 			      (const char *)device,
 			      (u_char *)(p.data),
 			      p.size)<0) {
+#endif
       cerr << "Can't write output packet to link\n";
       exit(-1);
   }
