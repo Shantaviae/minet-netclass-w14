@@ -58,7 +58,11 @@ EXECOBJS_EXCEPT_READER_WRITER =                 \
            test_arp.o                           \
            test_raw_ethernet_packet_buffer.o    \
            icmp_app.o                           \
-           test_bitsource.o
+           test_bitsource.o                     \
+           http_client.o                        \
+           http_server1.o                       \
+           http_server2.o                       \
+           http_server3.o                       \
 
 
 READER_WRITER_EXECOBJS=reader.o writer.o

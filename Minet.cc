@@ -218,6 +218,8 @@ struct FifoData {
 
 class Fifos : public deque<FifoData> {
 public:
+  Fifos() : deque<FifoData>() { clear();}
+  virtual ~Fifos() {   clear(); } 
   iterator FindMatching(const MinetHandle handle) {
     for (iterator x=begin(); x!=end(); ++x) {
       if ((*x).handle==handle) {

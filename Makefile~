@@ -34,7 +34,8 @@ EXECOBJS_EXCEPT_READER_WRITER =                 \
            device_driver.o                      \
            ethernet_mux.o			\
            arp_module.o                         \
-           ip_module_new_api.o                  \
+           ip_module_diffusion.o		\
+           ip_module_routing.o                  \
            ip_module.o                          \
            other_module.o                       \
            ip_mux.o                             \
@@ -58,7 +59,6 @@ EXECOBJS_EXCEPT_READER_WRITER =                 \
            test_raw_ethernet_packet_buffer.o    \
            icmp_app.o                           \
            test_bitsource.o
-#           device_driver_new_api.o              \
 
 
 READER_WRITER_EXECOBJS=reader.o writer.o
@@ -73,8 +73,8 @@ LIBNETLDFLAGS = `libnet-config --libs`
 PCAPCFLAGS  = -I/usr/include/pcap
 PCAPLDFLAGS = -lpcap
 
-CXX=g++ -Wall
-CC=gcc -Wall
+CXX=g++ 
+CC=gcc 
 AR=ar
 RANLAB=ranlib
 
@@ -116,9 +116,6 @@ writer: writer.o $(LIBMINET)
 device_driver.o : device_driver.cc
 	$(CXX) $(READERCXXFLAGS) $(WRITERCXXFLAGS) -c $< -o $(@F)
 
-device_driver_new_api.o : device_driver_new_api.cc
-	$(CXX) $(READERCXXFLAGS) $(WRITERCXXFLAGS) -c $< -o $(@F)
-
 ethernet.o : ethernet.cc
 	$(CXX) $(READERCXXFLAGS) $(WRITERCXXFLAGS) -c $< -o $(@F)
 
@@ -127,9 +124,6 @@ reader.o : reader.cc
 
 writer.o : writer.cc
 	$(CXX) $(WRITERCXXFLAGS) -c $< -o $(@F)
-
-ip:
-	cp ip_module_new_api ip_module 
 
 depend:
 	$(CXX) $(CXXFLAGS) $(READERCXXFLAGS) $(WRITERCXXFLAGS)  -MM $(OBJS:.o=.cc) > .dependencies

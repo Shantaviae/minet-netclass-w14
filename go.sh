@@ -14,8 +14,8 @@ rm -f pids
 ./ipother_module.sh
 ./sock_module.sh 
 case "foo$*" in
-  foo) ./run_module.sh app;;
-  foo?*) ./run_module.sh $* ;;
+  foo) export MINET_DISPLAY=xterm; ./run_module.sh app;;
+  foo?*) export MINET_DISPLAY=xterm; ./run_module.sh $* ;;
 esac
 
 
