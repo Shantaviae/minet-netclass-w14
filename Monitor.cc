@@ -1,96 +1,162 @@
-#include <stdlib.h>
 #include "Minet.h"
 #include "Monitor.h"
 
 
-int main(int argc, char *argv[])
+ostream & operator<<(ostream &os, const MinetOpType &op)
 {
-  MinetHandle 
-    reader,
-    writer,
-    device,
-    ethermux,
-    ip,
-    arp,
-    other,
-    ipmux,
-    ipother,
-    icmp,
-    udp,
-    tcp,
-    sock,
-    socklib,
-    app;
-
-  MinetInit(MINET_MONITOR);
-  
-  reader = MinetIsModuleMonitored(MINET_READER) ? MinetAccept(MINET_READER) : MINET_NOHANDLE;
-  writer = MinetIsModuleMonitored(MINET_WRITER) ? MinetAccept(MINET_WRITER) : MINET_NOHANDLE;
-  device = MinetIsModuleMonitored(MINET_DEVICE_DRIVER) ? MinetAccept(MINET_DEVICE_DRIVER) : MINET_NOHANDLE;
-  ethermux = MinetIsModuleMonitored(MINET_ETHERNET_MUX) ? MinetAccept(MINET_ETHERNET_MUX) : MINET_NOHANDLE;
-  ip= MinetIsModuleMonitored(MINET_IP_MODULE) ? MinetAccept(MINET_IP_MODULE) : MINET_NOHANDLE;
-  arp= MinetIsModuleMonitored(MINET_ARP_MODULE) ? MinetAccept(MINET_ARP_MODULE) : MINET_NOHANDLE;
-  other= MinetIsModuleMonitored(MINET_OTHER_MODULE) ? MinetAccept(MINET_OTHER_MODULE) : MINET_NOHANDLE;
-  ipmux= MinetIsModuleMonitored(MINET_IP_MUX) ? MinetAccept(MINET_IP_MUX) : MINET_NOHANDLE;
-  ipother=MinetIsModuleMonitored(MINET_IP_OTHER_MODULE) ? MinetAccept(MINET_IP_OTHER_MODULE) : MINET_NOHANDLE;
-  icmp=MinetIsModuleMonitored(MINET_ICMP_MODULE) ? MinetAccept(MINET_ICMP_MODULE) : MINET_NOHANDLE;
-  udp=MinetIsModuleMonitored(MINET_UDP_MODULE) ? MinetAccept(MINET_UDP_MODULE) : MINET_NOHANDLE;
-  tcp=MinetIsModuleMonitored(MINET_TCP_MODULE) ? MinetAccept(MINET_TCP_MODULE) : MINET_NOHANDLE;
-  sock=MinetIsModuleMonitored(MINET_SOCK_MODULE) ? MinetAccept(MINET_SOCK_MODULE) : MINET_NOHANDLE;
-  socklib=MinetIsModuleMonitored(MINET_SOCKLIB_MODULE) ? MinetAccept(MINET_SOCKLIB_MODULE) : MINET_NOHANDLE;
-  app=MinetIsModuleMonitored(MINET_APP) ? MinetAccept(MINET_APP) : MINET_NOHANDLE;
-
-  MinetEvent myevent;
-  MinetMonitoringEventDescription desc;
-
-  MinetEvent event;
-  MinetMonitoringEvent monevent;
-  RawEthernetPacket rawpacket;
-  Packet packet;
-  SockRequestResponse srr;
-  SockLibRequestResponse slrr;
-  ARPRequestResponse arr;
-
-  while (MinetGetNextEvent(myevent)==0) {
-    if (myevent.eventtype!=MinetEvent::Dataflow || myevent.direction!=MinetEvent::IN) {
-      cerr << "Ignoring this event: "<<myevent<<endl;
-    } else {
-      MinetReceive(myevent.handle,desc);
-      cerr << desc << " : ";
-      switch (desc.datatype) {
-      case MINET_EVENT:
-	MinetReceive(myevent.handle,event); 
-	cerr << event << endl;
-	break;
-      case MINET_MONITORINGEVENT:
-	MinetReceive(myevent.handle,monevent); 
-	cerr << monevent << endl;
-	break;
-      case MINET_RAWETHERNETPACKET:
-	MinetReceive(myevent.handle,rawpacket); 
-	cerr << rawpacket << endl;
-	break;
-      case MINET_PACKET:
-	MinetReceive(myevent.handle,packet); 
-	cerr << packet << endl;
-	break;
-      case MINET_ARPREQUESTRESPONSE:
-	MinetReceive(myevent.handle,arr); 
-	cerr << arr << endl;
-	break;
-      case MINET_SOCKREQUESTRESPONSE:
-	MinetReceive(myevent.handle,srr); 
-	cerr << srr << endl;
-	break;
-      case MINET_SOCKLIBREQUESTRESPONSE:
-	MinetReceive(myevent.handle,slrr); 
-	cerr << slrr << endl;
-	break;
-      case MINET_NONE:
-      default:
-	break;
-      }
-    }
-  }
-  MinetDeinit();
+  os << (op==MINET_INIT ? "MINET_INIT" :
+         op==MINET_DEINIT ? "MINET_DEINIT" :
+         op==MINET_SEND ? "MINET_SEND" :
+         op==MINET_RECEIVE ? "MINET_RECEIVE" :
+	 op==MINET_GETNEXTEVENT ? "MINET_GETNEXTEVENT" :
+         op==MINET_CONNECT ? "MINET_CONNECT" :
+         op==MINET_ACCEPT ? "MINET_ACCEPT" :
+         op==MINET_SENDTOMONITOR ? "MINET_SENDTOMONITOR" : 
+         op==MINET_NOP ? "MINET_NOP" : "UNKNOWN");
+  return os;
 }
+
+
+MinetMonitoringEventDescription::MinetMonitoringEventDescription() :
+  timestamp(0.0),
+  source(MINET_DEFAULT),
+  from(MINET_DEFAULT),
+  to(MINET_DEFAULT),
+  datatype(MINET_NONE),
+  optype(MINET_NOP)
+{}
+
+MinetMonitoringEventDescription::MinetMonitoringEventDescription(const MinetMonitoringEventDescription &rhs) 
+{
+  *this = rhs;
+}
+
+const MinetMonitoringEventDescription &MinetMonitoringEventDescription::operator= (const MinetMonitoringEventDescription &rhs) 
+{
+  timestamp=rhs.timestamp;
+  source=rhs.source;
+  from=rhs.from;
+  to=rhs.to;
+  datatype=rhs.datatype;
+  optype=rhs.optype;
+  return *this;
+}
+
+
+MinetMonitoringEventDescription::~MinetMonitoringEventDescription()
+{}
+
+void MinetMonitoringEventDescription::Serialize(const int fd) const
+{
+  if (writeall(fd,(char*)&timestamp,sizeof(timestamp))!=sizeof(timestamp)) {
+    throw SerializationException();
+  }
+  if (writeall(fd,(char*)&source,sizeof(source))!=sizeof(source)) {
+    throw SerializationException();
+  }
+  if (writeall(fd,(char*)&from,sizeof(from))!=sizeof(from)) {
+    throw SerializationException();
+  }
+  if (writeall(fd,(char*)&to,sizeof(to))!=sizeof(to)) {
+    throw SerializationException();
+  }
+  if (writeall(fd,(char*)&datatype,sizeof(datatype))!=sizeof(datatype)) {
+    throw SerializationException();
+  }
+  if (writeall(fd,(char*)&optype,sizeof(optype))!=sizeof(optype)) {
+    throw SerializationException();
+  }
+}
+
+void MinetMonitoringEventDescription::Unserialize(const int fd)
+{
+  if (readall(fd,(char*)&timestamp,sizeof(timestamp))!=sizeof(timestamp)) {
+    throw SerializationException();
+  }
+  if (readall(fd,(char*)&source,sizeof(source))!=sizeof(source)) {
+    throw SerializationException();
+  }
+  if (readall(fd,(char*)&from,sizeof(from))!=sizeof(from)) {
+    throw SerializationException();
+  }
+  if (readall(fd,(char*)&to,sizeof(to))!=sizeof(to)) {
+    throw SerializationException();
+  }
+  if (readall(fd,(char*)&datatype,sizeof(datatype))!=sizeof(datatype)) {
+    throw SerializationException();
+  }
+  if (readall(fd,(char*)&optype,sizeof(optype))!=sizeof(optype)) {
+    throw SerializationException();
+  }
+}
+
+
+ostream & MinetMonitoringEventDescription::Print(ostream &os) const
+{
+  os << "MinetMonitoringEventDescription(timestamp="<<timestamp
+     << ", source="<<source<<", from="<<from<<", to="<<to<<", optype="<<optype<< ", datatype="<<datatype<<")";
+  return os;
+}
+
+
+MinetMonitoringEvent::MinetMonitoringEvent() : string("")
+{}
+
+
+MinetMonitoringEvent::MinetMonitoringEvent(const string &s) : string(s)
+{}
+
+
+MinetMonitoringEvent::MinetMonitoringEvent(const char *s) : string(s)
+{}
+
+
+
+MinetMonitoringEvent::MinetMonitoringEvent(const MinetMonitoringEvent &rhs)
+{
+  *this=rhs;
+}
+
+const MinetMonitoringEvent &MinetMonitoringEvent::operator=(const MinetMonitoringEvent &rhs)
+{
+  ((string*)this)->operator=(rhs);
+  return *this;
+}
+
+MinetMonitoringEvent::~MinetMonitoringEvent()
+{}
+
+void MinetMonitoringEvent::Serialize(const int fd) const
+{
+  const char *buf=this->c_str();
+  int len=strlen(buf);
+  if (writeall(fd,(char*)&len,sizeof(len))!=sizeof(len)) { 
+    throw SerializationException();
+  }
+  if (writeall(fd,buf,len)!=len) { 
+    throw SerializationException();
+  }
+}
+
+void MinetMonitoringEvent::Unserialize(const int fd) 
+{
+  int len;
+  if (readall(fd,(char*)&len,sizeof(len))!=sizeof(len)) { 
+    throw SerializationException();
+  }
+  char buf[len+1];
+  if (readall(fd,buf,len)!=len) { 
+    throw SerializationException();
+  }
+  buf[len]=0;
+  this->operator=(MinetMonitoringEvent(buf));
+}
+
+
+ostream & MinetMonitoringEvent::Print(ostream &os) const
+{
+  os << "MinetMonitoringEvent("<<(*((string *)this))<<")";
+  return os;
+}
+
+
