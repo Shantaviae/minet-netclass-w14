@@ -32,6 +32,7 @@ EXECOBJS_EXCEPT_READER_WRITER =                 \
            device_driver.o                      \
            ethernet_mux.o			\
            arp_module.o                         \
+           ip_module_new_api.o                  \
            ip_module.o                          \
            other_module.o                       \
            ip_mux.o                             \
