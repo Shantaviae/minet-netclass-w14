@@ -1,8 +1,7 @@
 /*******************************************************************************
  * Project part B
  *
- * Authors: Jason Skicewicz
- *          Kohinoor Basu
+ * Author: Jason Skicewicz
  *
  * TCPState class that performs low level TCP functionality
  *
@@ -24,8 +23,22 @@ const unsigned int SEQ_LENGTH_MASK=0xFFFFFFFF; // Masks off first 32 bits
 
 const unsigned int TCP_MAXIMUM_SEGMENT_SIZE=536;
 
-enum eState {CLOSED, LISTEN, SYN_SENT, SYN_SENT1, SYN_RCVD, ESTABLISHED, CLOSE_WAIT,
-	     LAST_ACK, FIN_WAIT1, FIN_WAIT2, CLOSING, TIME_WAIT};
+const unsigned int NUM_TCP_STATES=13;
+
+enum eState { CLOSED      = 0,
+	      LISTEN      = 1,
+	      SYN_RCVD    = 2,
+	      SYN_SENT    = 3,
+	      SYN_SENT1   = 4,
+	      ESTABLISHED = 5,
+	      SEND_DATA   = 6,
+	      CLOSE_WAIT  = 7,
+	      FIN_WAIT1   = 8,
+	      CLOSING     = 9,
+	      LAST_ACK    = 10,
+	      FIN_WAIT2   = 11,
+	      TIME_WAIT   = 12 };
+
 
 class TCPState {
  public:
@@ -64,7 +77,7 @@ class TCPState {
 
     void SetSendRwnd(unsigned short window);
     unsigned int GetRwnd();
-    
+
     void SetLastRecvd(unsigned int lastrecvd);
     bool SetLastRecvd(unsigned int lastrecvd, unsigned int length);
     unsigned int GetLastRecvd();

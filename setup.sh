@@ -1,20 +1,17 @@
 #! /bin/bash
 
+#export PATH=~jskitz/minet-development:$PATH
 
 echo "Setting MINET environment vars"
-#export MINET_IPADDR="129.105.42.2"
 export MINET_IPADDR="10.10.253.1"
 export MINET_ETHERNETDEVICE="eth0"
 export MINET_ETHERNETADDR=`./get_addr.pl $MINET_ETHERNET_DEVICE`
-export MINET_READER="/home/Minet/execs/reader"
-export MINET_WRITER="/home/Minet/execs/writer"
-export MINET_READERBUFFER="100"
-export MINET_WRITERBUFFER="100"
 export MINET_DEBUGLEVEL="0"
 # log xterm gdb
 export MINET_DISPLAY=xterm
-export MINET_MODULES="monitor reader writer device_driver ethernet_mux arp_module ip_module other_module ip_mux icmp_module udp_module tcp_module ipother_module sock_module socklib_module"
-export MINET_MONITOR="ethernet_mux arp_module other_module ip_module ip_mux icmp_module udp_module tcp_module ipother_module sock_module socklib_module"
+export MINET_MODULES="monitor device_driver ethernet_mux arp_module ip_module other_module ip_mux icmp_module udp_module tcp_module ipother_module sock_module socklib_module"
+export MINET_MONITOR="ip_module tcp_module"
+#export MINET_MONITOR="device_driver ethernet_mux arp_module other_module ip_module ip_mux icmp_module udp_module tcp_module ipother_module sock_module socklib_module"
 export MINET_MONITORTYPE=text
 export MINET_MSS=256
 export MINET_MIP=512

@@ -102,7 +102,7 @@ class ConnectionList : public deque<ConnectionToStateMapping<STATE> >
     // More than one connection in list
     Time min=(*i).timeout;
     for (; i!=end(); ++i) {
-      if ((*i).bTmrActive == true && (*i).timeout < min) {
+      if ((*i).bTmrActive == true && (*i).timeout <= min) {
 	min=(*i).timeout;
 	ptr=i;
       }

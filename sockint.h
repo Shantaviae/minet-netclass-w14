@@ -20,7 +20,8 @@
 #include "udp.h"
 #include "tcp.h"
 
-enum srrType {CONNECT, ACCEPT, WRITE, FORWARD, CLOSE, STATUS};
+const unsigned NUM_SOCK_TYPES=6;
+enum srrType {CONNECT=0, ACCEPT=1, WRITE=2, FORWARD=3, CLOSE=4, STATUS=5};
 enum slrrType {mSOCKET, mBIND, mLISTEN, mACCEPT, mCONNECT, mREAD, mWRITE, 
 	       mRECVFROM, mSENDTO, mCLOSE, mSELECT, mPOLL, mSET_BLOCKING, 
 	       mSET_NONBLOCKING, mCAN_WRITE_NOW, mCAN_READ_NOW, mSTATUS};
