@@ -131,6 +131,7 @@ int main(int argc, char *argv[])
     return -1;
   }
   
+  cerr << "tcp_module operational\n";
   MinetSendToMonitor(MinetMonitoringEvent("tcp_module operational"));
 
   MinetEvent event;

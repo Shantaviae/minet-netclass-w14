@@ -15,8 +15,15 @@ export MINET_DEBUGLEVEL="0"
 export MINET_DISPLAY=xterm
 export MINET_MODULES="monitor reader writer device_driver ethernet_mux arp_module ip_module other_module ip_mux icmp_module udp_module tcp_module ipother_module sock_module socklib_module"
 export MINET_MONITOR="ethernet_mux arp_module other_module ip_module ip_mux icmp_module udp_module tcp_module ipother_module sock_module socklib_module"
+export MINET_MONITORTYPE=text
 export MINET_MSS=256
+export MINET_MIP=512
 export MINET_MTU=500
+
+case "foo$LD_LIBRARY_PATH" in
+  foo) export LD_LIBRARY_PATH=. ;;
+  foo?*) export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:. ;;
+esac
 
 echo "Done! Vars are follows:"
 

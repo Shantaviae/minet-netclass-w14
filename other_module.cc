@@ -29,7 +29,8 @@ int main(int argc, char *argv[])
     return -1;
   }
   
-  MinetSendToMonitor(MinetMonitoringEvent("other_module: handling OTHER traffic"));
+  cerr << "other_module: handling non-IP, non-ARP traffic\n";
+  MinetSendToMonitor(MinetMonitoringEvent("other_module: handling non-IP, non-ARP traffic"));
 
   MinetEvent event;
 
